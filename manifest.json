@@ -1,0 +1,19 @@
+{
+    "name": "Le Défi des 67",
+    "short_name": "Jeu 67",
+    "description": "Éclate tous les 67 et découvre les événements rares !",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0a0a1a",
+    "theme_color": "#0a0a1a",
+    "icons": [
+        {
+            "src": "icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["games"]
+}

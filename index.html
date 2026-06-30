@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Éclate les 67 !</title>
+    <meta name="description" content="Éclate tous les 67 et découvre les événements rares !">
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a1a">
+
+    <!-- iOS PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Jeu 67">
+    <link rel="apple-touch-icon" href="icon-512.png">
+
+    <!-- Prevent zoom / double-tap -->
+    <meta name="touch-action" content="manipulation">
+
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Animated background particles -->
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="start-screen" class="screen active">
+        <h1>Le Défi des <span class="glow-67">67</span></h1>
+        <p class="subtitle">Éclate les tous !</p>
+        <button id="start-btn">JOUER</button>
+    </div>
+    
+    <div id="game-screen" class="screen">
+        <div id="hud">
+            <div class="hud-buttons">
+                <button id="btn-leaderboard" class="hud-btn" title="Leaderboard">🏆</button>
+                <button id="btn-settings" class="hud-btn" title="Paramètres">⚙️</button>
+            </div>
+            <div id="score-board">
+                <span class="hud-label">SCORE</span>
+                <span id="score">0</span>
+            </div>
+            <div id="best-board">
+                <span class="hud-label">BEST</span>
+                <span id="best-score">0</span>
+            </div>
+        </div>
+        <div id="tnt-timer"></div>
+        <div id="game-container"></div>
+    </div>
+
+    <!-- Score milestone popup -->
+    <div id="milestone-popup"></div>
+
+    <!-- Nuke overlay -->
+    <div id="nuke-overlay">
+        <canvas id="nuke-canvas"></canvas>
+    </div>
+
+    <!-- Modals -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>Paramètres</h2>
+            <div class="setting-row">
+                <label for="volume-slider">Volume Principal</label>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.7">
+            </div>
+            <button class="close-btn" onclick="document.getElementById('settings-modal').classList.remove('active')">Fermer</button>
+        </div>
+    </div>
+
+    <div id="leaderboard-modal" class="modal-overlay">
+        <div class="modal-content lb-content">
+            <h2>Classement Mondial</h2>
+            
+            <div class="submit-score-section">
+                <input type="text" id="player-name" placeholder="Ton pseudo (3-10 lettres)" maxlength="10">
+                <button id="btn-submit-score">Publier mon Score (<span id="submit-score-val">0</span>)</button>
+            </div>
+            
+            <div id="leaderboard-list">
+                <div class="lb-loading">Chargement...</div>
+            </div>
+            
+            <button class="close-btn" onclick="document.getElementById('leaderboard-modal').classList.remove('active')">Fermer</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        // Register service worker for PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
