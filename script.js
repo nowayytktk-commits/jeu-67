@@ -36,6 +36,8 @@ let tntModeTimer = null;
 let tntTimeLeft = 0;
 let tntCountdown = null;
 let globalVolume = parseFloat(localStorage.getItem('jeu67-volume') || '0.7');
+let playerName = localStorage.getItem('jeu67-pseudo') || '';
+let lastSubmittedScore = 0;
 
 // Dreamlo Keys
 const dreamloPublic = '6a43f8228f40bb131856e168';
@@ -139,7 +141,11 @@ btnLeaderboard.addEventListener('click', () => {
 // ============== DREAMLO LEADERBOARD ==============
 function fetchLeaderboard() {
     leaderboardList.innerHTML = '<div class="lb-loading">Chargement...</div>';
-    fetch(`https://www.dreamlo.com/lb/${dreamloPublic}/json`)
+    
+    const url = `http://dreamlo.com/lb/${dreamloPublic}/json`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    
+    fetch(proxyUrl)
         .then(res => res.json())
         .then(data => {
             leaderboardList.innerHTML = '';
@@ -166,6 +172,29 @@ function fetchLeaderboard() {
         });
 }
 
+function autoSubmitScore() {
+    if (!playerName) {
+        playerName = prompt("Nouveau record ! Quel est ton pseudo ? (3-10 caractères)") || "Anonyme" + Math.floor(Math.random()*1000);
+        playerName = playerName.trim().replace(/[^a-zA-Z0-9]/g, '').substring(0, 10);
+        localStorage.setItem('jeu67-pseudo', playerName);
+        inputPlayerName.value = playerName;
+    }
+
+    if (score > lastSubmittedScore && score > 0) {
+        const url = `http://dreamlo.com/lb/${dreamloPrivate}/add/${playerName}/${score}`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+        
+        fetch(proxyUrl).then(() => {
+            lastSubmittedScore = score;
+        }).catch(() => {});
+    }
+}
+
+// Initial setup for the pseudo input
+if (playerName) {
+    inputPlayerName.value = playerName;
+}
+
 btnSubmitScore.addEventListener('click', () => {
     const name = inputPlayerName.value.trim().replace(/[^a-zA-Z0-9]/g, '');
     if (name.length < 3) {
@@ -173,12 +202,19 @@ btnSubmitScore.addEventListener('click', () => {
         return;
     }
     
+    playerName = name;
+    localStorage.setItem('jeu67-pseudo', playerName);
+    
     btnSubmitScore.disabled = true;
     btnSubmitScore.innerText = "Envoi...";
     
+    const url = `http://dreamlo.com/lb/${dreamloPrivate}/add/${playerName}/${score}`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    
     // Add score to Dreamlo
-    fetch(`https://www.dreamlo.com/lb/${dreamloPrivate}/add/${name}/${score}`)
+    fetch(proxyUrl)
         .then(() => {
+            lastSubmittedScore = score;
             btnSubmitScore.innerText = "Score publié !";
             fetchLeaderboard();
             setTimeout(() => {
@@ -580,6 +616,12 @@ function spawnNumber() {
             score++;
             scoreEl.innerText = score;
             updateBestScore();
+
+            // Auto submit score every 10 points or at milestones
+            if (score > 0 && score % 10 === 0) {
+                autoSubmitScore();
+            }
+
             showScorePopup(cx, cy - 20);
 
             // Milestone at 67
