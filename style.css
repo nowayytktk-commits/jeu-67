@@ -426,6 +426,7 @@ body {
     cursor: pointer;
     transition: all 0.2s;
     color: white;
+    pointer-events: auto;
 }
 
 .hud-btn:hover {
