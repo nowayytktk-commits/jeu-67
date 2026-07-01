@@ -743,7 +743,7 @@ function startGame() {
     }
 
     gameInterval = setInterval(() => {
-        if (gameContainer.querySelectorAll('.number-67').length < maxItems) {
+        if (!osuActive && gameContainer.querySelectorAll('.number-67').length < maxItems) {
             spawnNumber();
         }
     }, 400);
@@ -751,6 +751,7 @@ function startGame() {
 
 // ============== SPAWN LOGIC ==============
 function spawnNumber() {
+    if (osuActive) return; // Don't spawn during Osu event
     const el = document.createElement('div');
     el.classList.add('number-67', 'floating');
 
@@ -1068,6 +1069,10 @@ function startOsuMiniGame() {
     osuVideo.currentTime = 0;
     osuVideo.play().catch(() => {});
 
+    // Hide existing game elements
+    gameContainer.style.visibility = 'hidden';
+    document.getElementById('hud').style.visibility = 'hidden';
+
     showMilestone('🎵 OSU MODE ! 🎵');
 
     // Start timer countdown
@@ -1235,5 +1240,9 @@ function endOsuMiniGame() {
         osuResults.classList.remove('show');
         osuOverlay.classList.remove('active');
         osuGameArea.innerHTML = '';
+
+        // Show game elements again
+        gameContainer.style.visibility = 'visible';
+        document.getElementById('hud').style.visibility = 'visible';
     }, 3500);
 }
