@@ -500,7 +500,7 @@ function spawnBoss() {
         const cy = rect.top + rect.height / 2;
 
         // Hit feedback
-        playSound('boum');
+        playSound('click');
         spawnClickParticles(cx, cy, '#ff3333');
 
         // Shake the boss
