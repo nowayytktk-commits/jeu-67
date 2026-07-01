@@ -147,19 +147,18 @@ btnLeaderboard.addEventListener('click', () => {
 });
 
 // ============== LEADERBOARD DATA ==============
-// Load saved data
-let leaderboardData = JSON.parse(localStorage.getItem('jeu67-leaderboard') || '[]');
-let historyData = JSON.parse(localStorage.getItem('jeu67-history') || '[]');
+// Dreamlo Keys
+const dreamloPublic = '6a43f8228f40bb131856e168';
+const dreamloPrivate = 'LkNe2Bklx0OnMMqGkvaalA3Cb8ytP9yESxOs8QoR2Ouw';
 
-function saveLeaderboard() {
-    localStorage.setItem('jeu67-leaderboard', JSON.stringify(leaderboardData));
-}
+// Load saved data
+let historyData = JSON.parse(localStorage.getItem('jeu67-history') || '[]');
 
 function saveHistory() {
     localStorage.setItem('jeu67-history', JSON.stringify(historyData));
 }
 
-function addScoreToLeaderboard(name, scoreVal) {
+function addScoreToHistory(name, scoreVal) {
     const now = new Date();
     const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
     const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -168,21 +167,6 @@ function addScoreToLeaderboard(name, scoreVal) {
     historyData.unshift({ name, score: scoreVal, date: dateStr, time: timeStr });
     if (historyData.length > 50) historyData = historyData.slice(0, 50);
     saveHistory();
-
-    // Update leaderboard (keep best score per player, top 20)
-    const existing = leaderboardData.find(e => e.name.toLowerCase() === name.toLowerCase());
-    if (existing) {
-        if (scoreVal > existing.score) {
-            existing.score = scoreVal;
-            existing.date = dateStr;
-            existing.time = timeStr;
-        }
-    } else {
-        leaderboardData.push({ name, score: scoreVal, date: dateStr, time: timeStr });
-    }
-    leaderboardData.sort((a, b) => b.score - a.score);
-    if (leaderboardData.length > 20) leaderboardData = leaderboardData.slice(0, 20);
-    saveLeaderboard();
 }
 
 function getRankEmoji(index) {
@@ -200,24 +184,62 @@ function getRankClass(index) {
 }
 
 function renderLeaderboard() {
-    leaderboardList.innerHTML = '';
-    if (leaderboardData.length === 0) {
-        leaderboardList.innerHTML = '<div class="lb-loading">Aucun score pour le moment ! Joue pour apparaître ici.</div>';
-        return;
-    }
-    leaderboardData.forEach((entry, index) => {
-        const el = document.createElement('div');
-        el.classList.add('lb-entry');
-        const rankClass = getRankClass(index);
-        if (rankClass) el.classList.add(rankClass);
-        el.innerHTML = `
-            <div class="lb-rank">${getRankEmoji(index)}</div>
-            <div class="lb-name">${entry.name}</div>
-            <div class="lb-score">${entry.score}</div>
-            <div class="lb-date">${entry.date}</div>
-        `;
-        leaderboardList.appendChild(el);
-    });
+    leaderboardList.innerHTML = '<div class="lb-loading">Chargement Mondial... 🌍</div>';
+    
+    const url = `http://dreamlo.com/lb/${dreamloPublic}/json`;
+    // Try another proxy if allorigins is flaky:
+    const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+    
+    fetch(proxyUrl)
+        .then(res => res.json())
+        .then(data => {
+            leaderboardList.innerHTML = '';
+            if (!data.dreamlo || !data.dreamlo.leaderboard || !data.dreamlo.leaderboard.entry) {
+                leaderboardList.innerHTML = '<div class="lb-loading">Aucun score pour le moment !</div>';
+                return;
+            }
+            let entries = data.dreamlo.leaderboard.entry;
+            if (!Array.isArray(entries)) entries = [entries];
+
+            entries.slice(0, 50).forEach((entry, index) => {
+                const el = document.createElement('div');
+                el.classList.add('lb-entry');
+                const rankClass = getRankClass(index);
+                if (rankClass) el.classList.add(rankClass);
+                el.innerHTML = `
+                    <div class="lb-rank">${getRankEmoji(index)}</div>
+                    <div class="lb-name">${entry.name.substring(0, 15)}</div>
+                    <div class="lb-score">${entry.score}</div>
+                `;
+                leaderboardList.appendChild(el);
+            });
+        })
+        .catch(() => {
+            // Fallback proxy
+            const fallbackProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            fetch(fallbackProxy)
+                .then(res => res.json())
+                .then(data => {
+                    leaderboardList.innerHTML = '';
+                    let entries = data.dreamlo.leaderboard.entry;
+                    if (!Array.isArray(entries)) entries = [entries];
+                    entries.slice(0, 50).forEach((entry, index) => {
+                        const el = document.createElement('div');
+                        el.classList.add('lb-entry');
+                        const rankClass = getRankClass(index);
+                        if (rankClass) el.classList.add(rankClass);
+                        el.innerHTML = `
+                            <div class="lb-rank">${getRankEmoji(index)}</div>
+                            <div class="lb-name">${entry.name.substring(0, 15)}</div>
+                            <div class="lb-score">${entry.score}</div>
+                        `;
+                        leaderboardList.appendChild(el);
+                    });
+                })
+                .catch(() => {
+                    leaderboardList.innerHTML = '<div class="lb-loading">Erreur de connexion serveur... 😞</div>';
+                });
+        });
 }
 
 function renderHistory() {
@@ -251,15 +273,12 @@ document.querySelectorAll('.lb-tab').forEach(tab => {
 
 // Reset button
 btnResetScores.addEventListener('click', () => {
-    if (confirm('Supprimer tous les scores et l\'historique ? Cette action est irréversible !')) {
-        leaderboardData = [];
+    if (confirm('Supprimer l\'historique local ?')) {
         historyData = [];
-        saveLeaderboard();
         saveHistory();
         localStorage.removeItem('jeu67-best');
         bestScore = 0;
         bestScoreEl.innerText = '0';
-        renderLeaderboard();
         renderHistory();
     }
 });
@@ -283,7 +302,16 @@ function autoSubmitScore() {
     }
 
     if (score > lastSubmittedScore && score > 0) {
-        addScoreToLeaderboard(playerName, score);
+        addScoreToHistory(playerName, score);
+        
+        // Push to Dreamlo (Mondial)
+        const url = `http://dreamlo.com/lb/${dreamloPrivate}/add/${playerName}/${score}`;
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+        fetch(proxyUrl).catch(() => {
+            const fallbackProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+            fetch(fallbackProxy).catch(() => {});
+        });
+
         lastSubmittedScore = score;
     }
 }
