@@ -1006,3 +1006,229 @@ body.boss-active {
     font-weight: 700;
     color: white;
 }
+
+/* ============== OSU MINI-GAME ============== */
+#osu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 500;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+#osu-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+#osu-video {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(0.3) saturate(1.4);
+    z-index: 0;
+}
+
+#osu-game-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    cursor: crosshair;
+}
+
+/* Osu circle */
+.osu-circle {
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 100, 150, 0.9) 30%, rgba(255, 0, 80, 0.7) 100%);
+    border: 3px solid white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 1.5rem;
+    color: white;
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    cursor: pointer;
+    z-index: 2;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 20px rgba(255, 0, 100, 0.5);
+    transition: transform 0.08s ease;
+    animation: osu-appear 0.15s ease-out;
+}
+
+@keyframes osu-appear {
+    from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+.osu-circle:active {
+    transform: translate(-50%, -50%) scale(0.85);
+}
+
+/* Approach circle (shrinking ring) */
+.osu-approach {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200%;
+    height: 200%;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.7);
+    pointer-events: none;
+    animation: osu-approach-shrink 1s linear forwards;
+}
+
+@keyframes osu-approach-shrink {
+    from { width: 250%; height: 250%; opacity: 0.3; }
+    to { width: 100%; height: 100%; opacity: 1; }
+}
+
+/* Hit effects */
+.osu-hit-great {
+    position: absolute;
+    font-weight: 900;
+    font-size: 1.6rem;
+    color: #ffdd00;
+    text-shadow: 0 0 15px rgba(255, 200, 0, 0.8);
+    z-index: 10;
+    transform: translate(-50%, -50%);
+    animation: osu-hit-fly 0.7s ease-out forwards;
+    pointer-events: none;
+}
+
+.osu-hit-ok {
+    position: absolute;
+    font-weight: 900;
+    font-size: 1.3rem;
+    color: #00ccff;
+    text-shadow: 0 0 10px rgba(0, 200, 255, 0.8);
+    z-index: 10;
+    transform: translate(-50%, -50%);
+    animation: osu-hit-fly 0.7s ease-out forwards;
+    pointer-events: none;
+}
+
+.osu-hit-miss {
+    position: absolute;
+    font-weight: 900;
+    font-size: 1.3rem;
+    color: #ff3333;
+    text-shadow: 0 0 10px rgba(255, 50, 50, 0.8);
+    z-index: 10;
+    transform: translate(-50%, -50%);
+    animation: osu-hit-fly 0.7s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes osu-hit-fly {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -100%) scale(1.5); }
+}
+
+.osu-hit-burst {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.6);
+    transform: translate(-50%, -50%);
+    animation: osu-burst 0.4s ease-out forwards;
+    pointer-events: none;
+    z-index: 5;
+}
+
+@keyframes osu-burst {
+    from { width: 30px; height: 30px; opacity: 1; }
+    to { width: 120px; height: 120px; opacity: 0; }
+}
+
+/* Osu HUD */
+#osu-hud {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 2rem;
+    z-index: 10;
+}
+
+#osu-timer, #osu-score-display, #osu-combo {
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    padding: 0.5rem 1.2rem;
+    border-radius: 20px;
+    font-weight: 900;
+    font-size: 1.2rem;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+#osu-timer {
+    color: #ff6699;
+    min-width: 60px;
+    text-align: center;
+}
+
+#osu-combo {
+    color: #ffdd00;
+}
+
+/* Results screen */
+#osu-results {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(15px);
+    border: 2px solid rgba(255, 100, 150, 0.5);
+    border-radius: 20px;
+    padding: 2rem 3rem;
+    text-align: center;
+    z-index: 20;
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#osu-results.show {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.osu-results-title {
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin-bottom: 0.5rem;
+    color: #ff6699;
+}
+
+#osu-results-score {
+    font-size: 3rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #ff6699, #ffdd00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+}
+
+#osu-results-detail {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.8;
+}
+
+/* Osu item glow in game */
+.osu-item {
+    filter: drop-shadow(0 0 15px #ff6699);
+}

@@ -159,7 +159,8 @@ const TROPHIES = [
     { id: 'chicken', name: 'Poulet Explosif', emoji: '🐔', src: 'chiken.png' },
     { id: 'tnt', name: 'Bloc de TNT', emoji: '🧨', src: 'TNT.png' },
     { id: 'nuke', name: 'Survivant (100 pts)', emoji: '☢️' },
-    { id: 'boss', name: 'Tueur de Boss', emoji: '👾' }
+    { id: 'boss', name: 'Tueur de Boss', emoji: '👾' },
+    { id: 'osu', name: 'Joueur d\'Osu!', emoji: '🎵', src: 'osu.png' }
 ];
 
 let unlockedTrophies = JSON.parse(localStorage.getItem('jeu67-trophies') || '[]');
@@ -760,13 +761,15 @@ function spawnNumber() {
     const hasRose = gameContainer.querySelector('.rose-item') !== null;
     const hasChicken = gameContainer.querySelector('.chicken-item') !== null;
     const hasTasty = gameContainer.querySelector('.tasty-item') !== null;
+    const hasOsu = gameContainer.querySelector('.osu-item') !== null;
     
     // Evaluate probabilities, preventing duplicates
     const isEnder = !hasEnder && rand < 0.015;
-    const isRose = !isEnder && !hasRose && rand < 0.030; // another 1.5% chance
-    const isChicken = !isEnder && !isRose && !hasChicken && rand < 0.035; // 0.5% chance (rarer)
-    const isTasty = !isEnder && !isRose && !isChicken && !hasTasty && rand < 0.065; // 3% chance
-    const isTnt = !isEnder && !isRose && !isChicken && !isTasty && tntMode;
+    const isRose = !isEnder && !hasRose && rand < 0.030;
+    const isChicken = !isEnder && !isRose && !hasChicken && rand < 0.035;
+    const isOsu = !isEnder && !isRose && !isChicken && !hasOsu && rand < 0.045; // 1% chance
+    const isTasty = !isEnder && !isRose && !isChicken && !isOsu && !hasTasty && rand < 0.075;
+    const isTnt = !isEnder && !isRose && !isChicken && !isOsu && !isTasty && tntMode;
     const scale = 0.6 + Math.random() * 1.2;
 
     if (isChicken) {
@@ -790,6 +793,17 @@ function spawnNumber() {
         el.style.width = `${110 * scale}px`;
         el.style.height = `${110 * scale}px`;
         el.classList.add('tasty-item');
+        el.appendChild(img);
+    } else if (isOsu) {
+        const img = document.createElement('img');
+        img.src = 'osu.png';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        img.draggable = false;
+        el.style.width = `${100 * scale}px`;
+        el.style.height = `${100 * scale}px`;
+        el.classList.add('osu-item');
         el.appendChild(img);
     } else if (isRose) {
         const img = document.createElement('img');
@@ -851,7 +865,7 @@ function spawnNumber() {
 
     // Visual variation
     const hue = Math.random() * 360;
-    if (!isEnder && !isTnt && !isChicken && !isRose && !isTasty) el.style.filter = `hue-rotate(${hue}deg)`;
+    if (!isEnder && !isTnt && !isChicken && !isRose && !isTasty && !isOsu) el.style.filter = `hue-rotate(${hue}deg)`;
 
     const animDuration = 3 + Math.random() * 3;
     el.style.animationDuration = `${animDuration}s`;
@@ -889,6 +903,17 @@ function spawnNumber() {
                     setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 600);
                 }
             }, despawnDuration);
+            return;
+        }
+
+        // Osu item starts mini-game
+        if (isOsu) {
+            unlockTrophy('osu');
+            playSound('click');
+            spawnClickParticles(cx, cy, '#ff6699');
+            el.classList.add('pop');
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+            startOsuMiniGame();
             return;
         }
 
@@ -976,4 +1001,239 @@ function spawnNumber() {
             el.classList.add('visible');
         });
     });
+}
+
+// ============== OSU MINI-GAME ==============
+const osuOverlay = document.getElementById('osu-overlay');
+const osuVideo = document.getElementById('osu-video');
+const osuGameArea = document.getElementById('osu-game-area');
+const osuTimerEl = document.getElementById('osu-timer');
+const osuScoreDisplay = document.getElementById('osu-score-display');
+const osuComboEl = document.getElementById('osu-combo');
+const osuResults = document.getElementById('osu-results');
+const osuResultsScore = document.getElementById('osu-results-score');
+const osuResultsDetail = document.getElementById('osu-results-detail');
+
+let osuActive = false;
+let osuScore = 0;
+let osuCombo = 0;
+let osuMaxCombo = 0;
+let osuGreats = 0;
+let osuOks = 0;
+let osuMisses = 0;
+let osuTimer = null;
+let osuTimeLeft = 20;
+let osuBeatIndex = 0;
+let osuBeatTimer = null;
+
+// Beatmap: timestamps in ms when circles should appear (simulates a ~130 BPM rhythm)
+const OSU_BEATMAP = [
+    300, 760, 1220, 1680,
+    2370, 2830, 3290,
+    3980, 4210, 4440, 4670, 4900,
+    5590, 6050, 6510,
+    7200, 7660, 8120, 8580,
+    9270, 9500, 9730, 9960,
+    10650, 11110, 11570,
+    12260, 12720, 13180, 13640,
+    14330, 14560, 14790, 15020, 15250,
+    15940, 16400, 16860,
+    17550, 18010, 18470,
+    19160, 19390, 19620
+];
+
+function startOsuMiniGame() {
+    if (osuActive) return;
+    osuActive = true;
+    osuScore = 0;
+    osuCombo = 0;
+    osuMaxCombo = 0;
+    osuGreats = 0;
+    osuOks = 0;
+    osuMisses = 0;
+    osuTimeLeft = 20;
+    osuBeatIndex = 0;
+
+    // Show overlay
+    osuOverlay.classList.add('active');
+    osuResults.classList.remove('show');
+    osuGameArea.innerHTML = '';
+    osuTimerEl.innerText = '20s';
+    osuScoreDisplay.innerText = '0 pts';
+    osuComboEl.innerText = '0x Combo';
+
+    // Play video
+    osuVideo.muted = false;
+    osuVideo.volume = globalVolume;
+    osuVideo.currentTime = 0;
+    osuVideo.play().catch(() => {});
+
+    showMilestone('🎵 OSU MODE ! 🎵');
+
+    // Start timer countdown
+    const startTime = Date.now();
+
+    osuTimer = setInterval(() => {
+        const elapsed = (Date.now() - startTime) / 1000;
+        osuTimeLeft = Math.max(0, 20 - Math.floor(elapsed));
+        osuTimerEl.innerText = `${osuTimeLeft}s`;
+        if (osuTimeLeft <= 5) osuTimerEl.style.color = '#ff3333';
+        if (elapsed >= 20) {
+            endOsuMiniGame();
+        }
+    }, 200);
+
+    // Schedule beats
+    OSU_BEATMAP.forEach((beatTime, i) => {
+        setTimeout(() => {
+            if (!osuActive) return;
+            spawnOsuCircle(i + 1);
+        }, beatTime);
+    });
+}
+
+function spawnOsuCircle(number) {
+    const circle = document.createElement('div');
+    circle.classList.add('osu-circle');
+    circle.innerText = number;
+
+    // Random position (with margins)
+    const margin = 60;
+    const x = margin + Math.random() * (window.innerWidth - margin * 2);
+    const y = margin + 60 + Math.random() * (window.innerHeight - margin * 2 - 60);
+    circle.style.left = `${x}px`;
+    circle.style.top = `${y}px`;
+
+    // Approach circle
+    const approach = document.createElement('div');
+    approach.classList.add('osu-approach');
+    circle.appendChild(approach);
+
+    const spawnTime = Date.now();
+    let wasHit = false;
+
+    circle.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (wasHit) return;
+        wasHit = true;
+
+        const hitTime = Date.now() - spawnTime;
+        const accuracy = Math.abs(hitTime - 1000); // Ideal hit at 1000ms (when approach ring meets circle)
+
+        let hitClass, hitText, pts;
+        if (accuracy < 200) {
+            hitClass = 'osu-hit-great';
+            hitText = 'GREAT!';
+            pts = 100;
+            osuGreats++;
+            osuCombo++;
+        } else if (accuracy < 400) {
+            hitClass = 'osu-hit-ok';
+            hitText = 'OK';
+            pts = 50;
+            osuOks++;
+            osuCombo++;
+        } else {
+            hitClass = 'osu-hit-ok';
+            hitText = 'OK';
+            pts = 30;
+            osuOks++;
+            osuCombo++;
+        }
+
+        if (osuCombo > osuMaxCombo) osuMaxCombo = osuCombo;
+
+        // Combo bonus
+        const comboBonus = Math.floor(osuCombo / 5) * 10;
+        pts += comboBonus;
+
+        osuScore += pts;
+        osuScoreDisplay.innerText = `${osuScore} pts`;
+        osuComboEl.innerText = `${osuCombo}x Combo`;
+
+        // Hit effect
+        const hit = document.createElement('div');
+        hit.className = hitClass;
+        hit.innerText = hitText;
+        hit.style.left = circle.style.left;
+        hit.style.top = circle.style.top;
+        osuGameArea.appendChild(hit);
+        setTimeout(() => { if (hit.parentNode) hit.remove(); }, 700);
+
+        // Burst ring
+        const burst = document.createElement('div');
+        burst.className = 'osu-hit-burst';
+        burst.style.left = circle.style.left;
+        burst.style.top = circle.style.top;
+        osuGameArea.appendChild(burst);
+        setTimeout(() => { if (burst.parentNode) burst.remove(); }, 400);
+
+        playSound('click');
+        circle.remove();
+    });
+
+    osuGameArea.appendChild(circle);
+
+    // Auto-miss after 1.5s
+    setTimeout(() => {
+        if (!wasHit && circle.parentNode) {
+            wasHit = true;
+            osuMisses++;
+            osuCombo = 0;
+            osuComboEl.innerText = '0x Combo';
+
+            const miss = document.createElement('div');
+            miss.className = 'osu-hit-miss';
+            miss.innerText = 'MISS';
+            miss.style.left = circle.style.left;
+            miss.style.top = circle.style.top;
+            osuGameArea.appendChild(miss);
+            setTimeout(() => { if (miss.parentNode) miss.remove(); }, 700);
+
+            circle.remove();
+        }
+    }, 1500);
+}
+
+function endOsuMiniGame() {
+    if (!osuActive) return;
+    osuActive = false;
+    clearInterval(osuTimer);
+    osuTimerEl.style.color = '';
+
+    // Clear remaining circles
+    osuGameArea.querySelectorAll('.osu-circle').forEach(c => c.remove());
+
+    // Show results
+    osuResultsScore.innerText = `${osuScore} pts`;
+    const total = osuGreats + osuOks + osuMisses;
+    const accuracy = total > 0 ? Math.round(((osuGreats * 100 + osuOks * 50) / (total * 100)) * 100) : 0;
+    osuResultsDetail.innerHTML = `
+        GREAT: ${osuGreats} &nbsp;|&nbsp; OK: ${osuOks} &nbsp;|&nbsp; MISS: ${osuMisses}<br>
+        Max Combo: ${osuMaxCombo}x<br>
+        Précision: ${accuracy}%
+    `;
+    osuResults.classList.add('show');
+
+    // Add Osu score to main game score
+    const bonusPoints = Math.floor(osuScore / 10);
+    score += bonusPoints;
+    scoreEl.innerText = score;
+    updateBestScore();
+
+    if (score > 0 && score % 10 === 0) {
+        autoSubmitScore();
+    }
+
+    showMilestone(`🎵 Osu! +${bonusPoints} PTS ! 🎵`);
+
+    // Close overlay after delay
+    setTimeout(() => {
+        osuVideo.pause();
+        osuVideo.muted = true;
+        osuResults.classList.remove('show');
+        osuOverlay.classList.remove('active');
+        osuGameArea.innerHTML = '';
+    }, 3500);
 }
