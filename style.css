@@ -552,83 +552,145 @@ input[type=range]::-webkit-slider-runnable-track {
     padding: 1rem;
     border-radius: 12px;
     margin-bottom: 1.5rem;
+}
+
+/* ============== LEADERBOARD PSEUDO ============== */
+.lb-pseudo-section {
     display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+}
+
+.lb-pseudo-section label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 #player-name {
-    padding: 0.8rem;
+    flex: 1;
+    padding: 0.6rem 0.8rem;
     border-radius: 8px;
     border: 1px solid var(--glass-border);
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
     color: white;
-    font-size: 1.1rem;
+    font-size: 1rem;
     text-align: center;
     outline: none;
+    transition: border-color 0.2s;
 }
 
 #player-name:focus {
     border-color: var(--secondary);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
 }
 
-#btn-submit-score {
-    background: linear-gradient(135deg, var(--gold), #d97706);
-    color: white;
-    border: none;
-    padding: 0.8rem;
-    border-radius: 8px;
-    font-weight: 900;
-    font-size: 1.1rem;
-    cursor: pointer;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    transition: all 0.2s;
+/* ============== LEADERBOARD TABS ============== */
+.lb-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1rem;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
 }
 
-#btn-submit-score:hover {
-    filter: brightness(1.1);
-    transform: scale(1.02);
-}
-
-#btn-submit-score:disabled {
-    background: #555;
-    color: #888;
-    cursor: not-allowed;
-    transform: none;
-}
-
-#leaderboard-list {
+.lb-tab {
     flex: 1;
+    padding: 0.7rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.lb-tab:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.lb-tab.active {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(168, 85, 247, 0.15));
+    color: white;
+    box-shadow: inset 0 -2px 0 var(--secondary);
+}
+
+/* ============== LEADERBOARD PANELS ============== */
+.lb-panel {
+    display: none;
+}
+
+.lb-panel.active {
+    display: block;
+}
+
+#leaderboard-list, #history-list {
+    max-height: 320px;
     overflow-y: auto;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     text-align: left;
     background: rgba(0, 0, 0, 0.2);
     border-radius: 12px;
     padding: 0.5rem;
 }
 
+#leaderboard-list::-webkit-scrollbar,
+#history-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+#leaderboard-list::-webkit-scrollbar-thumb,
+#history-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+}
+
 .lb-loading {
     text-align: center;
     padding: 2rem;
-    color: rgba(255,255,255,0.5);
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .lb-entry {
     display: flex;
     justify-content: space-between;
-    padding: 0.8rem 1rem;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding: 0.7rem 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     align-items: center;
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.lb-entry:hover {
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .lb-entry:last-child {
     border-bottom: none;
 }
 
+.lb-entry.lb-gold {
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.1), transparent);
+}
+
+.lb-entry.lb-silver {
+    background: linear-gradient(90deg, rgba(192, 192, 192, 0.08), transparent);
+}
+
+.lb-entry.lb-bronze {
+    background: linear-gradient(90deg, rgba(205, 127, 50, 0.08), transparent);
+}
+
 .lb-rank {
     font-weight: 900;
     color: var(--gold);
-    width: 30px;
+    width: 40px;
+    font-size: 1rem;
 }
 
 .lb-name {
@@ -639,6 +701,38 @@ input[type=range]::-webkit-slider-runnable-track {
 .lb-score {
     font-weight: 900;
     color: var(--secondary);
+    font-size: 1.1rem;
+}
+
+.lb-date {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.35);
+    margin-left: 0.5rem;
+    white-space: nowrap;
+}
+
+/* ============== LEADERBOARD ACTIONS ============== */
+.lb-actions {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.lb-reset-btn {
+    background: rgba(255, 50, 50, 0.15);
+    border: 1px solid rgba(255, 50, 50, 0.3);
+    color: rgba(255, 100, 100, 0.8);
+    padding: 0.5rem 1.2rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.lb-reset-btn:hover {
+    background: rgba(255, 50, 50, 0.25);
+    color: #ff6666;
 }
 
 /* ============== ROSE EVENT ============== */

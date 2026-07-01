@@ -12,16 +12,18 @@ const tntTimerEl = document.getElementById('tnt-timer');
 const bgCanvas = document.getElementById('bg-canvas');
 const bgCtx = bgCanvas.getContext('2d');
 
+// ============== LOCAL LEADERBOARD ==============
+const leaderboardList = document.getElementById('leaderboard-list');
+const historyList = document.getElementById('history-list');
+const btnResetScores = document.getElementById('btn-reset-scores');
+
 // Modals & UI
 const btnSettings = document.getElementById('btn-settings');
 const btnLeaderboard = document.getElementById('btn-leaderboard');
 const settingsModal = document.getElementById('settings-modal');
 const leaderboardModal = document.getElementById('leaderboard-modal');
 const volumeSlider = document.getElementById('volume-slider');
-const btnSubmitScore = document.getElementById('btn-submit-score');
 const inputPlayerName = document.getElementById('player-name');
-const leaderboardList = document.getElementById('leaderboard-list');
-const submitScoreVal = document.getElementById('submit-score-val');
 
 // Boss DOM elements
 const bossOverlay = document.getElementById('boss-overlay');
@@ -48,10 +50,6 @@ let bossActive = false;
 let bossHP = 67;
 let bossElement = null;
 let bossAnimFrame = null;
-
-// Dreamlo Keys
-const dreamloPublic = '6a43f8228f40bb131856e168';
-const dreamloPrivate = 'LkNe2Bklx0OnMMqGkvaalA3Cb8ytP9yESxOs8QoR2Ouw';
 
 // ============== AUDIO POOL ==============
 const audioSources = {
@@ -144,59 +142,149 @@ btnSettings.addEventListener('click', () => {
 
 btnLeaderboard.addEventListener('click', () => {
     leaderboardModal.classList.add('active');
-    submitScoreVal.innerText = score;
-    fetchLeaderboard();
+    renderLeaderboard();
+    renderHistory();
 });
 
-// ============== DREAMLO LEADERBOARD ==============
-function fetchLeaderboard() {
-    leaderboardList.innerHTML = '<div class="lb-loading">Chargement...</div>';
-    
-    const url = `http://dreamlo.com/lb/${dreamloPublic}/json`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    
-    fetch(proxyUrl)
-        .then(res => res.json())
-        .then(data => {
-            leaderboardList.innerHTML = '';
-            if (!data.dreamlo || !data.dreamlo.leaderboard || !data.dreamlo.leaderboard.entry) {
-                leaderboardList.innerHTML = '<div class="lb-loading">Aucun score pour le moment !</div>';
-                return;
-            }
-            let entries = data.dreamlo.leaderboard.entry;
-            if (!Array.isArray(entries)) entries = [entries]; // If only 1 entry, dreamlo returns object
+// ============== LEADERBOARD DATA ==============
+// Load saved data
+let leaderboardData = JSON.parse(localStorage.getItem('jeu67-leaderboard') || '[]');
+let historyData = JSON.parse(localStorage.getItem('jeu67-history') || '[]');
 
-            entries.slice(0, 50).forEach((entry, index) => {
-                const el = document.createElement('div');
-                el.classList.add('lb-entry');
-                el.innerHTML = `
-                    <div class="lb-rank">#${index + 1}</div>
-                    <div class="lb-name">${entry.name.substring(0, 15)}</div>
-                    <div class="lb-score">${entry.score}</div>
-                `;
-                leaderboardList.appendChild(el);
-            });
-        })
-        .catch(() => {
-            leaderboardList.innerHTML = '<div class="lb-loading">Erreur de connexion.</div>';
-        });
+function saveLeaderboard() {
+    localStorage.setItem('jeu67-leaderboard', JSON.stringify(leaderboardData));
 }
+
+function saveHistory() {
+    localStorage.setItem('jeu67-history', JSON.stringify(historyData));
+}
+
+function addScoreToLeaderboard(name, scoreVal) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+    const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    // Add to history (every game)
+    historyData.unshift({ name, score: scoreVal, date: dateStr, time: timeStr });
+    if (historyData.length > 50) historyData = historyData.slice(0, 50);
+    saveHistory();
+
+    // Update leaderboard (keep best score per player, top 20)
+    const existing = leaderboardData.find(e => e.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+        if (scoreVal > existing.score) {
+            existing.score = scoreVal;
+            existing.date = dateStr;
+            existing.time = timeStr;
+        }
+    } else {
+        leaderboardData.push({ name, score: scoreVal, date: dateStr, time: timeStr });
+    }
+    leaderboardData.sort((a, b) => b.score - a.score);
+    if (leaderboardData.length > 20) leaderboardData = leaderboardData.slice(0, 20);
+    saveLeaderboard();
+}
+
+function getRankEmoji(index) {
+    if (index === 0) return '🥇';
+    if (index === 1) return '🥈';
+    if (index === 2) return '🥉';
+    return `#${index + 1}`;
+}
+
+function getRankClass(index) {
+    if (index === 0) return 'lb-gold';
+    if (index === 1) return 'lb-silver';
+    if (index === 2) return 'lb-bronze';
+    return '';
+}
+
+function renderLeaderboard() {
+    leaderboardList.innerHTML = '';
+    if (leaderboardData.length === 0) {
+        leaderboardList.innerHTML = '<div class="lb-loading">Aucun score pour le moment ! Joue pour apparaître ici.</div>';
+        return;
+    }
+    leaderboardData.forEach((entry, index) => {
+        const el = document.createElement('div');
+        el.classList.add('lb-entry');
+        const rankClass = getRankClass(index);
+        if (rankClass) el.classList.add(rankClass);
+        el.innerHTML = `
+            <div class="lb-rank">${getRankEmoji(index)}</div>
+            <div class="lb-name">${entry.name}</div>
+            <div class="lb-score">${entry.score}</div>
+            <div class="lb-date">${entry.date}</div>
+        `;
+        leaderboardList.appendChild(el);
+    });
+}
+
+function renderHistory() {
+    historyList.innerHTML = '';
+    if (historyData.length === 0) {
+        historyList.innerHTML = '<div class="lb-loading">Aucune partie jouée pour le moment.</div>';
+        return;
+    }
+    historyData.forEach((entry, index) => {
+        const el = document.createElement('div');
+        el.classList.add('lb-entry');
+        el.innerHTML = `
+            <div class="lb-rank" style="color: rgba(255,255,255,0.4)">${index + 1}.</div>
+            <div class="lb-name">${entry.name}</div>
+            <div class="lb-score">${entry.score}</div>
+            <div class="lb-date">${entry.date} ${entry.time}</div>
+        `;
+        historyList.appendChild(el);
+    });
+}
+
+// Tab switching
+document.querySelectorAll('.lb-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.lb-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.lb-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(`lb-panel-${tab.dataset.tab}`).classList.add('active');
+    });
+});
+
+// Reset button
+btnResetScores.addEventListener('click', () => {
+    if (confirm('Supprimer tous les scores et l\'historique ? Cette action est irréversible !')) {
+        leaderboardData = [];
+        historyData = [];
+        saveLeaderboard();
+        saveHistory();
+        localStorage.removeItem('jeu67-best');
+        bestScore = 0;
+        bestScoreEl.innerText = '0';
+        renderLeaderboard();
+        renderHistory();
+    }
+});
+
+// Pseudo persistence
+inputPlayerName.addEventListener('change', () => {
+    const name = inputPlayerName.value.trim().replace(/[^a-zA-Z0-9_]/g, '');
+    if (name.length >= 3) {
+        playerName = name;
+        localStorage.setItem('jeu67-pseudo', playerName);
+    }
+});
 
 function autoSubmitScore() {
     if (!playerName) {
-        playerName = prompt("Nouveau record ! Quel est ton pseudo ? (3-10 caractères)") || "Anonyme" + Math.floor(Math.random()*1000);
-        playerName = playerName.trim().replace(/[^a-zA-Z0-9]/g, '').substring(0, 10);
+        playerName = prompt("Quel est ton pseudo ? (3-10 caractères)") || "Joueur" + Math.floor(Math.random() * 1000);
+        playerName = playerName.trim().replace(/[^a-zA-Z0-9_]/g, '').substring(0, 10);
+        if (playerName.length < 3) playerName = "Joueur" + Math.floor(Math.random() * 1000);
         localStorage.setItem('jeu67-pseudo', playerName);
         inputPlayerName.value = playerName;
     }
 
     if (score > lastSubmittedScore && score > 0) {
-        const url = `http://dreamlo.com/lb/${dreamloPrivate}/add/${playerName}/${score}`;
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-        
-        fetch(proxyUrl).then(() => {
-            lastSubmittedScore = score;
-        }).catch(() => {});
+        addScoreToLeaderboard(playerName, score);
+        lastSubmittedScore = score;
     }
 }
 
@@ -204,42 +292,6 @@ function autoSubmitScore() {
 if (playerName) {
     inputPlayerName.value = playerName;
 }
-
-btnSubmitScore.addEventListener('click', () => {
-    const name = inputPlayerName.value.trim().replace(/[^a-zA-Z0-9]/g, '');
-    if (name.length < 3) {
-        alert("Ton pseudo doit contenir au moins 3 lettres/chiffres.");
-        return;
-    }
-    
-    playerName = name;
-    localStorage.setItem('jeu67-pseudo', playerName);
-    
-    btnSubmitScore.disabled = true;
-    btnSubmitScore.innerText = "Envoi...";
-    
-    const url = `http://dreamlo.com/lb/${dreamloPrivate}/add/${playerName}/${score}`;
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-    
-    // Add score to Dreamlo
-    fetch(proxyUrl)
-        .then(() => {
-            lastSubmittedScore = score;
-            btnSubmitScore.innerText = "Score publié !";
-            fetchLeaderboard();
-            setTimeout(() => {
-                btnSubmitScore.disabled = false;
-                btnSubmitScore.innerText = `Publier mon Score (${score})`;
-            }, 3000);
-        })
-        .catch(() => {
-            btnSubmitScore.innerText = "Erreur...";
-            setTimeout(() => {
-                btnSubmitScore.disabled = false;
-                btnSubmitScore.innerText = `Publier mon Score (${score})`;
-            }, 2000);
-        });
-});
 
 // ============== CLICK PARTICLES ==============
 function spawnClickParticles(x, y, color) {
