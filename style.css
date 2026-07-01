@@ -880,3 +880,129 @@ body.boss-active {
     50% { transform: translate(-1px, 1px); }
     75% { transform: translate(1px, 1px); }
 }
+
+/* ============== TROPHIES SYSTEM ============== */
+#trophies-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.trophy-item {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 1rem 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.trophy-item.locked {
+    filter: grayscale(100%) opacity(0.5);
+}
+
+.trophy-item.unlocked {
+    background: rgba(255, 215, 0, 0.1);
+    border-color: rgba(255, 215, 0, 0.4);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
+    animation: trophyGlow 2s infinite alternate;
+}
+
+@keyframes trophyGlow {
+    from { box-shadow: 0 0 10px rgba(255, 215, 0, 0.1); }
+    to { box-shadow: 0 0 20px rgba(255, 215, 0, 0.4); }
+}
+
+.trophy-img-wrapper {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.trophy-img-wrapper img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.trophy-img-wrapper .trophy-emoji {
+    font-size: 2.5rem;
+}
+
+.trophy-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.trophy-item.locked .trophy-name {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.trophy-subtitle {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 0.5rem;
+    text-align: center;
+}
+
+/* ============== TROPHY NOTIFICATION ============== */
+#trophy-notification {
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 140, 0, 0.15));
+    border: 1px solid rgba(255, 215, 0, 0.5);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 0.8rem 1.2rem;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    z-index: 1000;
+    box-shadow: 0 5px 25px rgba(255, 215, 0, 0.3);
+    transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    pointer-events: none;
+}
+
+#trophy-notification.show {
+    top: max(env(safe-area-inset-top, 20px), 20px);
+}
+
+.trophy-icon {
+    font-size: 2rem;
+    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.8));
+}
+
+.trophy-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.trophy-title {
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+#trophy-name-notif {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+}

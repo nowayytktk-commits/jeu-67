@@ -36,6 +36,7 @@
         <div id="hud">
             <div class="hud-buttons">
                 <button id="btn-leaderboard" class="hud-btn" title="Leaderboard">🏆</button>
+                <button id="btn-trophies" class="hud-btn" title="Trophées">🏅</button>
                 <button id="btn-settings" class="hud-btn" title="Paramètres">⚙️</button>
             </div>
             <div id="score-board">
@@ -53,6 +54,15 @@
 
     <!-- Score milestone popup -->
     <div id="milestone-popup"></div>
+
+    <!-- Trophy unlock notification -->
+    <div id="trophy-notification">
+        <div class="trophy-icon">🏅</div>
+        <div class="trophy-text">
+            <div class="trophy-title">Trophée Débloqué !</div>
+            <div id="trophy-name-notif">Nom du trophée</div>
+        </div>
+    </div>
 
     <!-- Nuke overlay -->
     <div id="nuke-overlay">
@@ -114,6 +124,19 @@
             </div>
             
             <button class="close-btn" onclick="document.getElementById('leaderboard-modal').classList.remove('active')">Fermer</button>
+        </div>
+    </div>
+
+    <div id="trophies-modal" class="modal-overlay">
+        <div class="modal-content lb-content">
+            <h2>🏅 Collection</h2>
+            <div class="trophy-subtitle">Découvre tous les événements rares du jeu !</div>
+            
+            <div id="trophies-grid">
+                <!-- Trophies will be injected here via JS -->
+            </div>
+            
+            <button class="close-btn" onclick="document.getElementById('trophies-modal').classList.remove('active')">Fermer</button>
         </div>
     </div>
 

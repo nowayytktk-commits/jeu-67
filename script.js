@@ -22,8 +22,13 @@ const btnSettings = document.getElementById('btn-settings');
 const btnLeaderboard = document.getElementById('btn-leaderboard');
 const settingsModal = document.getElementById('settings-modal');
 const leaderboardModal = document.getElementById('leaderboard-modal');
+const trophiesModal = document.getElementById('trophies-modal');
+const trophiesGrid = document.getElementById('trophies-grid');
 const volumeSlider = document.getElementById('volume-slider');
 const inputPlayerName = document.getElementById('player-name');
+const btnTrophies = document.getElementById('btn-trophies');
+const trophyNotif = document.getElementById('trophy-notification');
+const trophyNameNotif = document.getElementById('trophy-name-notif');
 
 // Boss DOM elements
 const bossOverlay = document.getElementById('boss-overlay');
@@ -144,6 +149,57 @@ btnLeaderboard.addEventListener('click', () => {
     leaderboardModal.classList.add('active');
     renderLeaderboard();
     renderHistory();
+});
+
+// ============== TROPHIES SYSTEM ==============
+const TROPHIES = [
+    { id: 'ender', name: 'Perle de l\'Ender', emoji: '🟣', src: 'Ender_Pearl.png' },
+    { id: 'rose', name: 'Rose', emoji: '🌹', src: 'Rose.png' },
+    { id: 'tasty', name: 'TastyCrousty', emoji: '🍪', src: 'tasty.png' },
+    { id: 'chicken', name: 'Poulet Explosif', emoji: '🐔', src: 'chiken.png' },
+    { id: 'tnt', name: 'Bloc de TNT', emoji: '🧨', src: 'TNT.png' },
+    { id: 'nuke', name: 'Survivant (100 pts)', emoji: '☢️' },
+    { id: 'boss', name: 'Tueur de Boss', emoji: '👾' }
+];
+
+let unlockedTrophies = JSON.parse(localStorage.getItem('jeu67-trophies') || '[]');
+
+function unlockTrophy(id) {
+    if (!unlockedTrophies.includes(id)) {
+        unlockedTrophies.push(id);
+        localStorage.setItem('jeu67-trophies', JSON.stringify(unlockedTrophies));
+        
+        const trophy = TROPHIES.find(t => t.id === id);
+        if (trophy) {
+            trophyNameNotif.innerText = trophy.name;
+            trophyNotif.classList.add('show');
+            setTimeout(() => trophyNotif.classList.remove('show'), 3000);
+        }
+    }
+}
+
+function renderTrophies() {
+    trophiesGrid.innerHTML = '';
+    TROPHIES.forEach(t => {
+        const isUnlocked = unlockedTrophies.includes(t.id);
+        const el = document.createElement('div');
+        el.className = `trophy-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+        
+        const imgContent = t.src 
+            ? `<img src="${t.src}" alt="${t.name}">`
+            : `<span class="trophy-emoji">${t.emoji}</span>`;
+            
+        el.innerHTML = `
+            <div class="trophy-img-wrapper">${imgContent}</div>
+            <div class="trophy-name">${isUnlocked ? t.name : '???'}</div>
+        `;
+        trophiesGrid.appendChild(el);
+    });
+}
+
+btnTrophies.addEventListener('click', () => {
+    trophiesModal.classList.add('active');
+    renderTrophies();
 });
 
 // ============== LEADERBOARD DATA ==============
@@ -405,6 +461,7 @@ function deactivateTntMode() {
 function triggerNukeExplosion() {
     if (hasPlayedNuke) return;
     hasPlayedNuke = true;
+    unlockTrophy('nuke');
     playSound('nuke');
     showMilestone('☢️ 100 ! NUKE ! ☢️');
     
@@ -620,6 +677,8 @@ function killBoss() {
     bossActive = false;
     cancelAnimationFrame(bossAnimFrame);
 
+    unlockTrophy('boss');
+
     // Death animation
     bossElement.classList.add('boss-dead');
     showMilestone('🏆 MEGA-67 VAINCU ! +67 PTS ! 🏆');
@@ -818,6 +877,7 @@ function spawnNumber() {
 
         // Ender pearl teleports
         if (isEnder) {
+            unlockTrophy('ender');
             playSound('teleport');
             spawnClickParticles(cx, cy, '#a855f7');
             el.style.left = `${10 + Math.random() * maxX}px`;
@@ -838,21 +898,25 @@ function spawnNumber() {
 
             // Sound
             if (isChicken) {
+                unlockTrophy('chicken');
                 playSound('pouletboum');
                 spawnClickParticles(cx, cy, '#ffaa00');
                 // Activate TNT mode!
                 activateTntMode();
             } else if (isTnt) {
+                unlockTrophy('tnt');
                 playSound('boum');
                 spawnClickParticles(cx, cy, '#ff3300');
                 // Big explosion particles for TNT
                 spawnClickParticles(cx, cy, '#ff6600');
                 spawnClickParticles(cx, cy, '#ffaa00');
             } else if (isTasty) {
+                unlockTrophy('tasty');
                 const squish = playSound('squish');
                 squish.onended = () => playSound('testy');
                 spawnClickParticles(cx, cy, '#ff007f');
             } else if (isRose) {
+                unlockTrophy('rose');
                 playSound('romance');
                 spawnClickParticles(cx, cy, '#ff007f');
             } else {
