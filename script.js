@@ -287,10 +287,10 @@ function showMilestone(text) {
 function activateTntMode() {
     if (tntMode) return; // Don't stack
     tntMode = true;
-    tntTimeLeft = 60;
+    tntTimeLeft = 30;
     document.body.classList.add('tnt-active');
     tntTimerEl.classList.add('show');
-    tntTimerEl.innerText = `💣 TNT MODE: 60s`;
+    tntTimerEl.innerText = `💣 TNT MODE: 30s`;
     showMilestone('🐔💥 TNT MODE ! 💥🐔');
 
     // Clear existing 67s and replace with TNT
@@ -328,7 +328,7 @@ function triggerNukeExplosion() {
     if (hasPlayedNuke) return;
     hasPlayedNuke = true;
     playSound('nuke');
-    showMilestone('☢️ 69 ! NUKE ! ☢️');
+    showMilestone('☢️ 100 ! NUKE ! ☢️');
     
     nukeOverlay.classList.add('active');
     const ctx = nukeCanvas.getContext('2d');
@@ -617,10 +617,18 @@ function spawnNumber() {
     el.classList.add('number-67', 'floating');
 
     const rand = Math.random();
-    const isEnder = rand < 0.015;
-    const isRose = !isEnder && rand < 0.030; // another 1.5% chance
-    const isChicken = !isEnder && !isRose && rand < 0.040; // 1% chance
-    const isTasty = !isEnder && !isRose && !isChicken && rand < 0.070; // 3% chance
+    
+    // Check if events already exist
+    const hasEnder = gameContainer.querySelector('.ender-item') !== null;
+    const hasRose = gameContainer.querySelector('.rose-item') !== null;
+    const hasChicken = gameContainer.querySelector('.chicken-item') !== null;
+    const hasTasty = gameContainer.querySelector('.tasty-item') !== null;
+    
+    // Evaluate probabilities, preventing duplicates
+    const isEnder = !hasEnder && rand < 0.015;
+    const isRose = !isEnder && !hasRose && rand < 0.030; // another 1.5% chance
+    const isChicken = !isEnder && !isRose && !hasChicken && rand < 0.035; // 0.5% chance (rarer)
+    const isTasty = !isEnder && !isRose && !isChicken && !hasTasty && rand < 0.065; // 3% chance
     const isTnt = !isEnder && !isRose && !isChicken && !isTasty && tntMode;
     const scale = 0.6 + Math.random() * 1.2;
 
@@ -644,6 +652,7 @@ function spawnNumber() {
         img.draggable = false;
         el.style.width = `${110 * scale}px`;
         el.style.height = `${110 * scale}px`;
+        el.classList.add('tasty-item');
         el.appendChild(img);
     } else if (isRose) {
         const img = document.createElement('img');
@@ -792,8 +801,8 @@ function spawnNumber() {
                 hasPlayedAudio = true;
             }
 
-            // Nuke at 69
-            if (score >= 69 && !hasPlayedNuke) {
+            // Nuke at 100
+            if (score >= 100 && !hasPlayedNuke) {
                 triggerNukeExplosion();
             }
 
