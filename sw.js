@@ -19,7 +19,8 @@ const ASSETS = [
     './chiken.png',
     './TNT.png',
     './Rose.png',
-    './Romance.mp3'
+    './Romance.mp3',
+    './CatDance.mp4'
 ];
 
 // Install: cache all assets

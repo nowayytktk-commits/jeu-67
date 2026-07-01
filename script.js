@@ -23,6 +23,13 @@ const inputPlayerName = document.getElementById('player-name');
 const leaderboardList = document.getElementById('leaderboard-list');
 const submitScoreVal = document.getElementById('submit-score-val');
 
+// Boss DOM elements
+const bossOverlay = document.getElementById('boss-overlay');
+const bossVideo = document.getElementById('boss-video');
+const bossHud = document.getElementById('boss-hud');
+const bossHpFill = document.getElementById('boss-hp-fill');
+const bossHpText = document.getElementById('boss-hp-text');
+
 // ============== GAME STATE ==============
 let score = 0;
 let gameInterval;
@@ -38,6 +45,11 @@ let tntCountdown = null;
 let globalVolume = parseFloat(localStorage.getItem('jeu67-volume') || '0.7');
 let playerName = localStorage.getItem('jeu67-pseudo') || '';
 let lastSubmittedScore = 0;
+let bossActive = false;
+let bossHP = 67;
+let bossElement = null;
+let bossAnimFrame = null;
+let bossMusicAudio = null;
 
 // Dreamlo Keys
 const dreamloPublic = '6a43f8228f40bb131856e168';
@@ -419,6 +431,155 @@ function triggerNukeExplosion() {
     requestAnimationFrame(animateNuke);
 }
 
+// ============== BOSS FIGHT ==============
+function spawnBoss() {
+    if (bossActive) return;
+    bossActive = true;
+    bossHP = 67;
+
+    // Show video background
+    bossOverlay.classList.add('active');
+    bossVideo.muted = false;
+    bossVideo.volume = globalVolume;
+    bossVideo.currentTime = 0;
+    bossVideo.play().catch(() => {});
+
+    // Show HP bar
+    bossHud.classList.add('active');
+    updateBossHP();
+
+    // Screen shake
+    document.body.classList.add('boss-active');
+
+    // Show milestone text
+    showMilestone('👾 MEGA-67 APPARAÎT ! 👾');
+
+    // Create the boss element
+    bossElement = document.createElement('div');
+    bossElement.classList.add('boss-element');
+    bossElement.innerText = '67';
+    document.body.appendChild(bossElement);
+
+    // DVD bounce variables
+    let bx = window.innerWidth / 2 - 70;
+    let by = window.innerHeight / 2 - 70;
+    let bvx = (2 + Math.random() * 2) * (Math.random() < 0.5 ? 1 : -1);
+    let bvy = (2 + Math.random() * 2) * (Math.random() < 0.5 ? 1 : -1);
+    const bossSize = 140;
+
+    function moveBoss() {
+        if (!bossActive) return;
+
+        bx += bvx;
+        by += bvy;
+
+        // Bounce off edges
+        if (bx <= 0) { bx = 0; bvx = Math.abs(bvx); }
+        if (bx >= window.innerWidth - bossSize) { bx = window.innerWidth - bossSize; bvx = -Math.abs(bvx); }
+        if (by <= 0) { by = 0; bvy = Math.abs(bvy); }
+        if (by >= window.innerHeight - bossSize) { by = window.innerHeight - bossSize; bvy = -Math.abs(bvy); }
+
+        bossElement.style.left = `${bx}px`;
+        bossElement.style.top = `${by}px`;
+
+        bossAnimFrame = requestAnimationFrame(moveBoss);
+    }
+    bossAnimFrame = requestAnimationFrame(moveBoss);
+
+    // Click handler for boss
+    bossElement.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!bossActive || bossHP <= 0) return;
+
+        bossHP--;
+        updateBossHP();
+
+        const rect = bossElement.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height / 2;
+
+        // Hit feedback
+        playSound('boum');
+        spawnClickParticles(cx, cy, '#ff3333');
+
+        // Shake the boss
+        bossElement.classList.remove('boss-hit');
+        void bossElement.offsetWidth;
+        bossElement.classList.add('boss-hit');
+
+        // Speed up slightly after each hit
+        bvx *= 1.01;
+        bvy *= 1.01;
+
+        // Give score
+        score++;
+        scoreEl.innerText = score;
+        updateBestScore();
+        showScorePopup(cx, cy - 20);
+
+        // Boss killed!
+        if (bossHP <= 0) {
+            killBoss();
+        }
+    });
+}
+
+function updateBossHP() {
+    const pct = (bossHP / 67) * 100;
+    bossHpFill.style.width = `${pct}%`;
+    bossHpText.innerText = `${bossHP} / 67`;
+
+    // Change bar color when low
+    if (pct < 25) {
+        bossHpFill.style.background = 'linear-gradient(90deg, #ff0000, #990000)';
+    } else if (pct < 50) {
+        bossHpFill.style.background = 'linear-gradient(90deg, #ff4400, #ff0000)';
+    }
+}
+
+function killBoss() {
+    bossActive = false;
+    cancelAnimationFrame(bossAnimFrame);
+
+    // Death animation
+    bossElement.classList.add('boss-dead');
+    showMilestone('🏆 MEGA-67 VAINCU ! +67 PTS ! 🏆');
+
+    // Big explosion of particles
+    const rect = bossElement.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    for (let i = 0; i < 5; i++) {
+        setTimeout(() => spawnClickParticles(cx, cy, `hsl(${Math.random()*360}, 100%, 60%)`), i * 100);
+    }
+
+    // Bonus score: +67
+    score += 67;
+    scoreEl.innerText = score;
+    updateBestScore();
+    autoSubmitScore();
+
+    // Stop video and music
+    setTimeout(() => {
+        bossVideo.pause();
+        bossVideo.muted = true;
+        bossOverlay.classList.remove('active');
+        bossHud.classList.remove('active');
+        document.body.classList.remove('boss-active');
+
+        // Remove boss element
+        if (bossElement && bossElement.parentNode) {
+            bossElement.parentNode.removeChild(bossElement);
+        }
+        bossElement = null;
+
+        // Reset HP bar for next time
+        bossHpFill.style.width = '100%';
+        bossHpFill.style.background = '';
+    }, 1000);
+}
+
 // ============== GAME FLOW ==============
 startBtn.addEventListener('click', () => {
     startScreen.classList.remove('active');
@@ -634,6 +795,15 @@ function spawnNumber() {
             // Nuke at 69
             if (score >= 69 && !hasPlayedNuke) {
                 triggerNukeExplosion();
+            }
+
+            // Boss spawn chance: 2% every 10 points after score 50
+            if (score > 50 && score % 10 === 0 && !bossActive && Math.random() < 0.02) {
+                setTimeout(() => spawnBoss(), 500);
+            }
+            // Also guaranteed boss at score 134 (67*2) if never seen
+            if (score === 134 && !bossActive) {
+                setTimeout(() => spawnBoss(), 500);
             }
 
             // Score animation
