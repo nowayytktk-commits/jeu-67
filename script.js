@@ -39,7 +39,6 @@ let bestScore = parseInt(localStorage.getItem('jeu67-best') || '0');
 let hasPlayedAudio = false;
 let hasPlayedNuke = false;
 let tntMode = false;
-let tntModeTimer = null;
 let tntTimeLeft = 0;
 let tntCountdown = null;
 let globalVolume = parseFloat(localStorage.getItem('jeu67-volume') || '0.7');
@@ -49,7 +48,6 @@ let bossActive = false;
 let bossHP = 67;
 let bossElement = null;
 let bossAnimFrame = null;
-let bossMusicAudio = null;
 
 // Dreamlo Keys
 const dreamloPublic = '6a43f8228f40bb131856e168';
@@ -296,7 +294,7 @@ function activateTntMode() {
     // Clear existing 67s and replace with TNT
     const existing67s = gameContainer.querySelectorAll('.number-67:not(.pop)');
     existing67s.forEach(el => {
-        if (!el.classList.contains('ender-item') && !el.querySelector('img[src="tasty.png"]') && !el.querySelector('img[src="chiken.png"]')) {
+        if (!el.classList.contains('ender-item') && !el.classList.contains('tasty-item') && !el.classList.contains('rose-item') && !el.classList.contains('chicken-item')) {
             el.classList.add('fade-out');
             setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 600);
         }
@@ -714,7 +712,7 @@ function spawnNumber() {
 
     // Visual variation
     const hue = Math.random() * 360;
-    if (!isEnder && !isTnt && !isChicken && !isRose) el.style.filter = `hue-rotate(${hue}deg)`;
+    if (!isEnder && !isTnt && !isChicken && !isRose && !isTasty) el.style.filter = `hue-rotate(${hue}deg)`;
 
     const animDuration = 3 + Math.random() * 3;
     el.style.animationDuration = `${animDuration}s`;
