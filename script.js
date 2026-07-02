@@ -160,7 +160,8 @@ const TROPHIES = [
     { id: 'tnt', name: 'Bloc de TNT', emoji: '🧨', src: 'TNT.png' },
     { id: 'nuke', name: 'Survivant (100 pts)', emoji: '☢️' },
     { id: 'boss', name: 'Tueur de Boss', emoji: '👾' },
-    { id: 'osu', name: 'Joueur d\'Osu!', emoji: '🎵', src: 'osu.png' }
+    { id: 'osu', name: 'Joueur d\'Osu!', emoji: '🎵', src: 'osu.png' },
+    { id: 'rickroll', name: 'Never Gonna Give You Up', emoji: '🎤' }
 ];
 
 let unlockedTrophies = JSON.parse(localStorage.getItem('jeu67-trophies') || '[]');
@@ -743,7 +744,7 @@ function startGame() {
     }
 
     gameInterval = setInterval(() => {
-        if (!osuActive && gameContainer.querySelectorAll('.number-67').length < maxItems) {
+        if (!osuActive && !rickrollActive && gameContainer.querySelectorAll('.number-67').length < maxItems) {
             spawnNumber();
         }
     }, 400);
@@ -751,7 +752,7 @@ function startGame() {
 
 // ============== SPAWN LOGIC ==============
 function spawnNumber() {
-    if (osuActive) return; // Don't spawn during Osu event
+    if (osuActive || rickrollActive) return; // Don't spawn during events
     const el = document.createElement('div');
     el.classList.add('number-67', 'floating');
 
@@ -763,14 +764,16 @@ function spawnNumber() {
     const hasChicken = gameContainer.querySelector('.chicken-item') !== null;
     const hasTasty = gameContainer.querySelector('.tasty-item') !== null;
     const hasOsu = gameContainer.querySelector('.osu-item') !== null;
+    const hasRickroll = gameContainer.querySelector('.rickroll-item') !== null;
     
     // Evaluate probabilities, preventing duplicates
     const isEnder = !hasEnder && rand < 0.015;
     const isRose = !isEnder && !hasRose && rand < 0.030;
     const isChicken = !isEnder && !isRose && !hasChicken && rand < 0.035;
     const isOsu = !isEnder && !isRose && !isChicken && !hasOsu && rand < 0.045; // 1% chance
-    const isTasty = !isEnder && !isRose && !isChicken && !isOsu && !hasTasty && rand < 0.075;
-    const isTnt = !isEnder && !isRose && !isChicken && !isOsu && !isTasty && tntMode;
+    const isRickroll = !isEnder && !isRose && !isChicken && !isOsu && !hasRickroll && rand < 0.055; // 1% chance
+    const isTasty = !isEnder && !isRose && !isChicken && !isOsu && !isRickroll && !hasTasty && rand < 0.085;
+    const isTnt = !isEnder && !isRose && !isChicken && !isOsu && !isRickroll && !isTasty && tntMode;
     const scale = 0.6 + Math.random() * 1.2;
 
     if (isChicken) {
@@ -806,6 +809,10 @@ function spawnNumber() {
         el.style.height = `${100 * scale}px`;
         el.classList.add('osu-item');
         el.appendChild(img);
+    } else if (isRickroll) {
+        el.innerText = '67';
+        el.style.fontSize = `${2.8 * scale}rem`;
+        el.classList.add('rickroll-item');
     } else if (isRose) {
         const img = document.createElement('img');
         img.src = 'Rose.png';
@@ -866,7 +873,7 @@ function spawnNumber() {
 
     // Visual variation
     const hue = Math.random() * 360;
-    if (!isEnder && !isTnt && !isChicken && !isRose && !isTasty && !isOsu) el.style.filter = `hue-rotate(${hue}deg)`;
+    if (!isEnder && !isTnt && !isChicken && !isRose && !isTasty && !isOsu && !isRickroll) el.style.filter = `hue-rotate(${hue}deg)`;
 
     const animDuration = 3 + Math.random() * 3;
     el.style.animationDuration = `${animDuration}s`;
@@ -915,6 +922,17 @@ function spawnNumber() {
             el.classList.add('pop');
             setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
             startOsuMiniGame();
+            return;
+        }
+
+        // Rickroll item starts trap
+        if (isRickroll) {
+            unlockTrophy('rickroll');
+            playSound('click');
+            spawnClickParticles(cx, cy, '#ffd700');
+            el.classList.add('pop');
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+            startRickrollEvent();
             return;
         }
 
@@ -1245,4 +1263,109 @@ function endOsuMiniGame() {
         gameContainer.style.visibility = 'visible';
         document.getElementById('hud').style.visibility = 'visible';
     }, 3500);
+}
+
+// ============== RICKROLL EVENT ==============
+const rickrollOverlay = document.getElementById('rickroll-overlay');
+const rickrollVideo = document.getElementById('rickroll-video');
+const rickrollGameArea = document.getElementById('rickroll-game-area');
+
+let rickrollActive = false;
+let rickrollTimer = null;
+let fakeButtonsInterval = null;
+
+function startRickrollEvent() {
+    if (rickrollActive) return;
+    rickrollActive = true;
+
+    // Show overlay
+    rickrollOverlay.classList.add('active');
+    rickrollGameArea.innerHTML = '';
+
+    // Hide existing game elements
+    gameContainer.style.visibility = 'hidden';
+    document.getElementById('hud').style.visibility = 'hidden';
+
+    // Play video
+    rickrollVideo.muted = false;
+    rickrollVideo.volume = globalVolume;
+    rickrollVideo.currentTime = 0;
+    rickrollVideo.play().catch(() => {});
+
+    showMilestone('🎤 NEVER GONNA GIVE YOU UP 🎤');
+
+    // Spawn fake buttons
+    fakeButtonsInterval = setInterval(spawnFakeCloseButton, 800);
+
+    // End after 20 seconds
+    rickrollTimer = setTimeout(() => {
+        endRickrollEvent();
+    }, 20000);
+}
+
+function spawnFakeCloseButton() {
+    if (!rickrollActive) return;
+
+    const btn = document.createElement('div');
+    btn.className = 'fake-close-btn';
+    btn.innerText = 'Fermer la pub ✖';
+
+    const margin = 50;
+    const x = margin + Math.random() * (window.innerWidth - margin * 2 - 120);
+    const y = margin + Math.random() * (window.innerHeight - margin * 2 - 40);
+    
+    btn.style.left = `${x}px`;
+    btn.style.top = `${y}px`;
+
+    // Troll interaction: moving on hover/touch
+    const moveBtn = () => {
+        const newX = margin + Math.random() * (window.innerWidth - margin * 2 - 120);
+        const newY = margin + Math.random() * (window.innerHeight - margin * 2 - 40);
+        btn.style.left = `${newX}px`;
+        btn.style.top = `${newY}px`;
+    };
+
+    // Make it very hard to click by moving it on hover (mouse)
+    btn.addEventListener('mouseenter', moveBtn);
+
+    // If they manage to click it (touchscreen or fast clicker)
+    btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        playSound('squish');
+        moveBtn();
+        // Spawn an extra button just to annoy them more
+        spawnFakeCloseButton();
+    });
+
+    rickrollGameArea.appendChild(btn);
+
+    // Despawn after a few seconds to avoid cluttering too much
+    setTimeout(() => {
+        if (btn.parentNode) btn.remove();
+    }, 4000 + Math.random() * 2000);
+}
+
+function endRickrollEvent() {
+    if (!rickrollActive) return;
+    rickrollActive = false;
+
+    clearInterval(fakeButtonsInterval);
+    clearTimeout(rickrollTimer);
+
+    // Give bonus points for surviving
+    score += 50;
+    scoreEl.innerText = score;
+    updateBestScore();
+
+    showMilestone('🎤 SURVIVANT DU RICKROLL +50 PTS 🎤');
+
+    rickrollVideo.pause();
+    rickrollVideo.muted = true;
+    rickrollOverlay.classList.remove('active');
+    rickrollGameArea.innerHTML = '';
+
+    // Show game elements again
+    gameContainer.style.visibility = 'visible';
+    document.getElementById('hud').style.visibility = 'visible';
 }
