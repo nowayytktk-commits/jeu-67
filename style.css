@@ -153,7 +153,8 @@ body {
     left: 0;
     right: 0;
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
+    align-items: center;
     gap: 1rem;
     padding: 0.8rem 1rem;
     z-index: 100;
@@ -406,9 +407,9 @@ body {
 .hud-buttons {
     display: flex;
     gap: 0.5rem;
-    position: absolute;
-    right: 1rem;
-    top: 0;
+    margin-left: auto;
+    z-index: 10;
+    pointer-events: auto;
 }
 
 .hud-btn {
