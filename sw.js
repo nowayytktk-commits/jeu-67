@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jeu67-v1';
+const CACHE_NAME = 'jeu67-v3';
 const ASSETS = [
     './',
     './index.html',
@@ -20,7 +20,10 @@ const ASSETS = [
     './TNT.png',
     './Rose.png',
     './Romance.mp3',
-    './CatDance.mp4'
+    './CatDance.mp4',
+    './osu.png',
+    './ClipOSU.mp4',
+    './rickroll.mp4'
 ];
 
 // Install: cache all assets
@@ -45,11 +48,18 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Fetch: serve from cache first, fallback to network
+// Fetch: network first, fallback to cache
 self.addEventListener('fetch', (event) => {
     event.respondWith(
-        caches.match(event.request).then((response) => {
-            return response || fetch(event.request);
+        fetch(event.request).then((response) => {
+            // Update cache with fresh version
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, clone);
+            });
+            return response;
+        }).catch(() => {
+            return caches.match(event.request);
         })
     );
 });
