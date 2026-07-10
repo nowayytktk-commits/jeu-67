@@ -161,7 +161,8 @@ const TROPHIES = [
     { id: 'nuke', name: 'Survivant (100 pts)', emoji: '☢️' },
     { id: 'boss', name: 'Tueur de Boss', emoji: '👾' },
     { id: 'osu', name: 'Joueur d\'Osu!', emoji: '🎵', src: 'osu.png' },
-    { id: 'rickroll', name: 'Never Gonna Give You Up', emoji: '🎤' }
+    { id: 'rickroll', name: 'Never Gonna Give You Up', emoji: '🎤' },
+    { id: 'gacha', name: 'Collectionneur', emoji: '🎁' }
 ];
 
 let unlockedTrophies = JSON.parse(localStorage.getItem('jeu67-trophies') || '[]');
@@ -744,7 +745,7 @@ function startGame() {
     }
 
     gameInterval = setInterval(() => {
-        if (!osuActive && !rickrollActive && gameContainer.querySelectorAll('.number-67').length < maxItems) {
+        if (!osuActive && !rickrollActive && !gachaActive && gameContainer.querySelectorAll('.number-67').length < maxItems) {
             spawnNumber();
         }
     }, 400);
@@ -752,7 +753,7 @@ function startGame() {
 
 // ============== SPAWN LOGIC ==============
 function spawnNumber() {
-    if (osuActive || rickrollActive) return; // Don't spawn during events
+    if (osuActive || rickrollActive || gachaActive) return; // Don't spawn during events
     const el = document.createElement('div');
     el.classList.add('number-67', 'floating');
 
@@ -765,6 +766,7 @@ function spawnNumber() {
     const hasTasty = gameContainer.querySelector('.tasty-item') !== null;
     const hasOsu = gameContainer.querySelector('.osu-item') !== null;
     const hasRickroll = gameContainer.querySelector('.rickroll-item') !== null;
+    const hasGacha = gameContainer.querySelector('.gacha-item') !== null;
     
     // Evaluate probabilities, preventing duplicates
     const isEnder = !hasEnder && rand < 0.015;
@@ -772,8 +774,9 @@ function spawnNumber() {
     const isChicken = !isEnder && !isRose && !hasChicken && rand < 0.035;
     const isOsu = !isEnder && !isRose && !isChicken && !hasOsu && rand < 0.045; // 1% chance
     const isRickroll = !isEnder && !isRose && !isChicken && !isOsu && !hasRickroll && rand < 0.055; // 1% chance
-    const isTasty = !isEnder && !isRose && !isChicken && !isOsu && !isRickroll && !hasTasty && rand < 0.085;
-    const isTnt = !isEnder && !isRose && !isChicken && !isOsu && !isRickroll && !isTasty && tntMode;
+    const isGacha = !isEnder && !isRose && !isChicken && !isOsu && !isRickroll && !hasGacha && rand < 0.065; // 1% chance
+    const isTasty = !isEnder && !isRose && !isChicken && !isOsu && !isRickroll && !isGacha && !hasTasty && rand < 0.095;
+    const isTnt = !isEnder && !isRose && !isChicken && !isOsu && !isRickroll && !isGacha && !isTasty && tntMode;
     const scale = 0.6 + Math.random() * 1.2;
 
     if (isChicken) {
@@ -813,6 +816,11 @@ function spawnNumber() {
         el.innerText = '67';
         el.style.fontSize = `${2.8 * scale}rem`;
         el.classList.add('rickroll-item');
+    } else if (isGacha) {
+        el.innerText = '🎁';
+        el.style.fontSize = `${3.5 * scale}rem`;
+        el.classList.add('gacha-item');
+        el.style.filter = 'drop-shadow(0 0 10px rgba(255,215,0,0.6))';
     } else if (isRose) {
         const img = document.createElement('img');
         img.src = 'Rose.png';
@@ -873,7 +881,7 @@ function spawnNumber() {
 
     // Visual variation
     const hue = Math.random() * 360;
-    if (!isEnder && !isTnt && !isChicken && !isRose && !isTasty && !isOsu && !isRickroll) el.style.filter = `hue-rotate(${hue}deg)`;
+    if (!isEnder && !isTnt && !isChicken && !isRose && !isTasty && !isOsu && !isRickroll && !isGacha) el.style.filter = `hue-rotate(${hue}deg)`;
 
     const animDuration = 3 + Math.random() * 3;
     el.style.animationDuration = `${animDuration}s`;
@@ -933,6 +941,16 @@ function spawnNumber() {
             el.classList.add('pop');
             setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
             startRickrollEvent();
+            return;
+        }
+
+        // Gacha item starts lootbox
+        if (isGacha) {
+            playSound('click');
+            spawnClickParticles(cx, cy, '#ffd700');
+            el.classList.add('pop');
+            setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
+            startGachaEvent();
             return;
         }
 
@@ -1369,3 +1387,316 @@ function endRickrollEvent() {
     gameContainer.style.visibility = 'visible';
     document.getElementById('hud').style.visibility = 'visible';
 }
+
+// ============== GACHA / LOOTBOX EVENT ==============
+const gachaOverlay = document.getElementById('gacha-overlay');
+const gachaChest = document.getElementById('gacha-chest');
+const gachaReveal = document.getElementById('gacha-reveal');
+const gachaRays = document.getElementById('gacha-rays');
+const gachaParticles = document.getElementById('gacha-particles');
+const gachaRarityEl = document.getElementById('gacha-rarity');
+const gachaItemEmoji = document.getElementById('gacha-item-emoji');
+const gachaItemName = document.getElementById('gacha-item-name');
+const gachaItemDesc = document.getElementById('gacha-item-desc');
+const gachaEquipBtn = document.getElementById('gacha-equip-btn');
+const gachaCloseBtn = document.getElementById('gacha-close-btn');
+const customCursorEl = document.getElementById('custom-cursor');
+const cursorGrid = document.getElementById('cursor-grid');
+
+let gachaActive = false;
+let lastGachaItem = null;
+
+// Cursor loot table
+const CURSOR_ITEMS = [
+    // Common (55%)
+    { id: 'potato', emoji: '🥔', name: 'Patate Cosmique', desc: '« La plus belle des patates »', rarity: 'common' },
+    { id: 'sock', emoji: '🧦', name: 'Chaussette Usagée', desc: '« Sent bon le gaming »', rarity: 'common' },
+    { id: 'rock', emoji: '🪨', name: 'Caillou Brillant', desc: '« C\'est juste un caillou... »', rarity: 'common' },
+    { id: 'toilet', emoji: '🧻', name: 'Rouleau de PQ', desc: '« Plus rare qu\'on le pense »', rarity: 'common' },
+    { id: 'spoon', emoji: '🥄', name: 'Cuillère Mythique', desc: '« Il n\'y a pas de cuillère »', rarity: 'common' },
+    { id: 'toothbrush', emoji: '🪥', name: 'Brosse à Dents', desc: '« L\'hygiène avant tout »', rarity: 'common' },
+    { id: 'poop', emoji: '💩', name: 'Emoji Caca', desc: '« Chef d\'œuvre moderne »', rarity: 'common' },
+    { id: 'clown', emoji: '🤡', name: 'Le Clown', desc: '« C\'est toi le clown »', rarity: 'common' },
+    // Rare (25%)
+    { id: 'sword', emoji: '⚔️', name: 'Épée de 67', desc: '« Tranche les scores »', rarity: 'rare' },
+    { id: 'diamond', emoji: '💎', name: 'Diamant', desc: '« Craft un pickaxe »', rarity: 'rare' },
+    { id: 'fire', emoji: '🔥', name: 'Flamme', desc: '« Ça chauffe ici »', rarity: 'rare' },
+    { id: 'ghost', emoji: '👻', name: 'Fantôme', desc: '« Boo ! »', rarity: 'rare' },
+    { id: 'alien', emoji: '👽', name: 'Alien', desc: '« Venu de la planète 67 »', rarity: 'rare' },
+    // Epic (15%)
+    { id: 'star', emoji: '🌟', name: 'Étoile Filante', desc: '« Fais un vœu ! »', rarity: 'epic' },
+    { id: 'crystal', emoji: '🔮', name: 'Boule Magique', desc: '« Je vois... un 67 »', rarity: 'epic' },
+    { id: 'target', emoji: '🎯', name: 'Cible', desc: '« Précision maximale »', rarity: 'epic' },
+    { id: 'dragon', emoji: '🐉', name: 'Dragon', desc: '« Dracarys! »', rarity: 'epic' },
+    // Legendary (5%)
+    { id: 'crown', emoji: '👑', name: 'Couronne Royale', desc: '« Le roi des 67 »', rarity: 'legendary' },
+    { id: 'skull', emoji: '💀', name: 'Crâne Doré', desc: '« Skull emoji = FR »', rarity: 'legendary' },
+    { id: 'rainbow', emoji: '🌈', name: 'Arc-en-ciel', desc: '« Ultra méga rare »', rarity: 'legendary' },
+];
+
+const RARITY_WEIGHTS = { common: 55, rare: 25, epic: 15, legendary: 5 };
+const RARITY_LABELS = { common: 'Commun', rare: 'Rare', epic: 'Épique', legendary: 'Légendaire' };
+
+// Cursor persistence
+let unlockedCursors = JSON.parse(localStorage.getItem('jeu67-cursors') || '["default"]');
+let activeCursor = localStorage.getItem('jeu67-active-cursor') || 'default';
+
+function rollGachaItem() {
+    const roll = Math.random() * 100;
+    let rarity;
+    if (roll < RARITY_WEIGHTS.legendary) rarity = 'legendary';
+    else if (roll < RARITY_WEIGHTS.legendary + RARITY_WEIGHTS.epic) rarity = 'epic';
+    else if (roll < RARITY_WEIGHTS.legendary + RARITY_WEIGHTS.epic + RARITY_WEIGHTS.rare) rarity = 'rare';
+    else rarity = 'common';
+
+    const pool = CURSOR_ITEMS.filter(c => c.rarity === rarity);
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function startGachaEvent() {
+    if (gachaActive || osuActive || rickrollActive) return;
+    gachaActive = true;
+    unlockTrophy('gacha');
+
+    // Hide game
+    gameContainer.style.visibility = 'hidden';
+    document.getElementById('hud').style.visibility = 'hidden';
+
+    // Reset state
+    gachaChest.classList.remove('hidden', 'opening');
+    gachaReveal.classList.remove('active', 'rarity-common', 'rarity-rare', 'rarity-epic', 'rarity-legendary');
+    gachaRays.classList.remove('active');
+    gachaParticles.innerHTML = '';
+
+    // Show overlay
+    gachaOverlay.classList.add('active');
+
+    // Start sparkle particles
+    const sparkleInterval = setInterval(() => {
+        if (!gachaActive) { clearInterval(sparkleInterval); return; }
+        spawnGachaSparkle();
+    }, 300);
+}
+
+function spawnGachaSparkle() {
+    const sparkle = document.createElement('div');
+    sparkle.className = 'gacha-sparkle';
+    sparkle.innerText = ['✨', '⭐', '💫', '🌟'][Math.floor(Math.random() * 4)];
+    sparkle.style.left = `${Math.random() * 100}%`;
+    sparkle.style.top = `${50 + Math.random() * 40}%`;
+    gachaParticles.appendChild(sparkle);
+    setTimeout(() => sparkle.remove(), 2000);
+}
+
+function spawnGachaConfetti(rarityColor) {
+    const colors = {
+        common: ['#9ca3af', '#d1d5db', '#6b7280'],
+        rare: ['#3b82f6', '#60a5fa', '#93c5fd'],
+        epic: ['#a855f7', '#c084fc', '#7c3aed'],
+        legendary: ['#fbbf24', '#f59e0b', '#fcd34d', '#ff6b6b', '#4ade80']
+    };
+    const palette = colors[rarityColor] || colors.common;
+    
+    for (let i = 0; i < 50; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'gacha-confetti-piece';
+        piece.style.left = `${Math.random() * 100}vw`;
+        piece.style.top = `${-10 + Math.random() * 20}vh`;
+        piece.style.background = palette[Math.floor(Math.random() * palette.length)];
+        piece.style.animationDuration = `${2 + Math.random() * 2}s`;
+        piece.style.animationDelay = `${Math.random() * 0.5}s`;
+        piece.style.width = `${6 + Math.random() * 10}px`;
+        piece.style.height = `${6 + Math.random() * 10}px`;
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 4000);
+    }
+}
+
+// Chest click handler
+gachaChest.addEventListener('pointerdown', () => {
+    if (gachaChest.classList.contains('opening')) return;
+    gachaChest.classList.add('opening');
+    gachaRays.classList.add('active');
+
+    // Play buildup sound (use existing milestone sound as placeholder)
+    playSound('milestone');
+
+    // Shake for 1.5 seconds then reveal
+    setTimeout(() => {
+        const item = rollGachaItem();
+        lastGachaItem = item;
+        revealGachaItem(item);
+    }, 1500);
+});
+
+function revealGachaItem(item) {
+    // Hide chest
+    gachaChest.classList.add('hidden');
+
+    // Set rarity class on reveal
+    gachaReveal.className = 'gacha-reveal active rarity-' + item.rarity;
+
+    // Fill reveal content
+    gachaRarityEl.innerText = RARITY_LABELS[item.rarity];
+    gachaItemEmoji.innerText = item.emoji;
+    gachaItemName.innerText = item.name;
+    gachaItemDesc.innerText = item.desc;
+
+    // Check if already owned
+    const alreadyOwned = unlockedCursors.includes(item.id);
+    if (alreadyOwned) {
+        gachaEquipBtn.innerText = 'Déjà obtenu !';
+        gachaEquipBtn.style.opacity = '0.5';
+    } else {
+        gachaEquipBtn.innerText = 'Équiper !';
+        gachaEquipBtn.style.opacity = '1';
+        // Unlock the cursor
+        unlockedCursors.push(item.id);
+        localStorage.setItem('jeu67-cursors', JSON.stringify(unlockedCursors));
+    }
+
+    // Confetti!
+    spawnGachaConfetti(item.rarity);
+
+    // Play sound based on rarity
+    if (item.rarity === 'legendary') {
+        playSound('nuke'); // epic sound for legendary
+    } else if (item.rarity === 'epic') {
+        playSound('boum');
+    } else if (item.rarity === 'rare') {
+        playSound('click');
+    } else {
+        playSound('squish'); // troll sound for common
+    }
+
+    // Show milestone for legendary
+    if (item.rarity === 'legendary') {
+        showMilestone('👑 LÉGENDAIRE ! 👑');
+    } else if (item.rarity === 'common') {
+        showMilestone('🥔 Wow... +1 pt 🥔');
+    }
+}
+
+// Equip button
+gachaEquipBtn.addEventListener('pointerdown', () => {
+    if (lastGachaItem && unlockedCursors.includes(lastGachaItem.id)) {
+        setActiveCursor(lastGachaItem.id);
+        endGachaEvent();
+    }
+});
+
+// Close button
+gachaCloseBtn.addEventListener('pointerdown', () => {
+    endGachaEvent();
+});
+
+function endGachaEvent() {
+    if (!gachaActive) return;
+    gachaActive = false;
+
+    // Points based on rarity
+    const rarityPoints = { common: 1, rare: 10, epic: 25, legendary: 67 };
+    const pts = lastGachaItem ? (rarityPoints[lastGachaItem.rarity] || 1) : 1;
+    score += pts;
+    scoreEl.innerText = score;
+    updateBestScore();
+
+    // Clean up
+    gachaOverlay.classList.remove('active');
+    gachaRays.classList.remove('active');
+    gachaParticles.innerHTML = '';
+
+    // Show game again
+    gameContainer.style.visibility = 'visible';
+    document.getElementById('hud').style.visibility = 'visible';
+
+    lastGachaItem = null;
+}
+
+// ============== CUSTOM CURSOR SYSTEM ==============
+function setActiveCursor(cursorId) {
+    activeCursor = cursorId;
+    localStorage.setItem('jeu67-active-cursor', cursorId);
+    applyCursor();
+    renderCursorGrid();
+}
+
+function applyCursor() {
+    if (activeCursor === 'default') {
+        customCursorEl.classList.remove('active');
+        document.body.classList.remove('custom-cursor-active');
+    } else {
+        const item = CURSOR_ITEMS.find(c => c.id === activeCursor);
+        if (item) {
+            customCursorEl.innerText = item.emoji;
+            customCursorEl.classList.add('active');
+            document.body.classList.add('custom-cursor-active');
+        }
+    }
+}
+
+// Follow mouse/touch
+document.addEventListener('mousemove', (e) => {
+    if (activeCursor !== 'default') {
+        customCursorEl.style.left = e.clientX + 'px';
+        customCursorEl.style.top = e.clientY + 'px';
+    }
+});
+
+document.addEventListener('touchmove', (e) => {
+    if (activeCursor !== 'default' && e.touches.length > 0) {
+        customCursorEl.style.left = e.touches[0].clientX + 'px';
+        customCursorEl.style.top = e.touches[0].clientY + 'px';
+    }
+}, { passive: true });
+
+// Click animation
+document.addEventListener('pointerdown', () => {
+    if (activeCursor !== 'default') {
+        customCursorEl.style.transform = 'translate(-50%, -50%) scale(0.75)';
+        setTimeout(() => {
+            customCursorEl.style.transform = 'translate(-50%, -50%) scale(1)';
+        }, 100);
+    }
+});
+
+// Render cursor grid in settings
+function renderCursorGrid() {
+    cursorGrid.innerHTML = '';
+
+    // Default cursor option
+    const defaultEl = document.createElement('div');
+    defaultEl.className = `cursor-item ${activeCursor === 'default' ? 'selected' : ''}`;
+    defaultEl.innerHTML = `
+        <span class="cursor-emoji">🖱️</span>
+        <span class="cursor-name">Par défaut</span>
+    `;
+    defaultEl.addEventListener('click', () => setActiveCursor('default'));
+    cursorGrid.appendChild(defaultEl);
+
+    // All cursor items
+    CURSOR_ITEMS.forEach(item => {
+        const isUnlocked = unlockedCursors.includes(item.id);
+        const isSelected = activeCursor === item.id;
+        const el = document.createElement('div');
+        el.className = `cursor-item ${isSelected ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`;
+        el.innerHTML = `
+            <span class="cursor-rarity-dot ${item.rarity}"></span>
+            <span class="cursor-emoji">${isUnlocked ? item.emoji : '❓'}</span>
+            <span class="cursor-name">${isUnlocked ? item.name : '???'}</span>
+        `;
+        if (isUnlocked) {
+            el.addEventListener('click', () => setActiveCursor(item.id));
+        }
+        cursorGrid.appendChild(el);
+    });
+}
+
+// Init cursor system on load
+applyCursor();
+
+// Render cursor grid when settings opens
+btnSettings.addEventListener('click', () => {
+    renderCursorGrid();
+});

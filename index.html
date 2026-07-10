@@ -112,13 +112,41 @@
         <div id="rickroll-game-area"></div>
     </div>
 
+    <!-- Gacha / Lootbox overlay -->
+    <div id="gacha-overlay">
+        <div id="gacha-rays"></div>
+        <div id="gacha-particles"></div>
+        <div id="gacha-chest" class="gacha-chest">
+            <div class="chest-top">🎁</div>
+            <div class="chest-label">ITEM LÉGENDAIRE DÉTECTÉ !</div>
+            <div class="chest-sub">Clique pour ouvrir...</div>
+        </div>
+        <div id="gacha-reveal" class="gacha-reveal">
+            <div id="gacha-rarity"></div>
+            <div id="gacha-item-emoji"></div>
+            <div id="gacha-item-name"></div>
+            <div id="gacha-item-desc"></div>
+            <button id="gacha-equip-btn">Équiper</button>
+            <button id="gacha-close-btn">Fermer</button>
+        </div>
+    </div>
+
+    <!-- Custom cursor follower -->
+    <div id="custom-cursor"></div>
+
     <!-- Modals -->
     <div id="settings-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h2>Paramètres</h2>
+        <div class="modal-content lb-content">
+            <h2>⚙️ Paramètres</h2>
             <div class="setting-row">
                 <label for="volume-slider">Volume Principal</label>
                 <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.7">
+            </div>
+            <div class="setting-section">
+                <h3>🖱️ Curseur</h3>
+                <div id="cursor-grid" class="cursor-grid">
+                    <!-- Cursors injected by JS -->
+                </div>
             </div>
             <button class="close-btn" onclick="document.getElementById('settings-modal').classList.remove('active')">Fermer</button>
         </div>
