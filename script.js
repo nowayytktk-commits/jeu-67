@@ -1615,11 +1615,23 @@ function endGachaEvent() {
 }
 
 // ============== CUSTOM CURSOR SYSTEM ==============
+const cursorsModal = document.getElementById('cursors-modal');
+const btnCursors = document.getElementById('btn-cursors');
+const cursorStats = document.getElementById('cursor-stats');
+const cursorEffectInfo = document.getElementById('cursor-effect-info');
+let cursorTrailThrottle = 0;
+
 function setActiveCursor(cursorId) {
     activeCursor = cursorId;
     localStorage.setItem('jeu67-active-cursor', cursorId);
     applyCursor();
     renderCursorGrid();
+}
+
+function getActiveCursorRarity() {
+    if (activeCursor === 'default') return null;
+    const item = CURSOR_ITEMS.find(c => c.id === activeCursor);
+    return item ? item.rarity : null;
 }
 
 function applyCursor() {
@@ -1636,18 +1648,64 @@ function applyCursor() {
     }
 }
 
-// Follow mouse/touch
+// Trail effect for epic+ cursors
+function spawnCursorTrail(x, y) {
+    const rarity = getActiveCursorRarity();
+    if (rarity !== 'epic' && rarity !== 'legendary') return;
+
+    const trail = document.createElement('div');
+    trail.className = `cursor-trail ${rarity}`;
+    trail.style.left = x + 'px';
+    trail.style.top = y + 'px';
+    document.body.appendChild(trail);
+    setTimeout(() => trail.remove(), 500);
+}
+
+// Sparkle particles for legendary cursors
+function spawnCursorSparkle(x, y) {
+    const rarity = getActiveCursorRarity();
+    if (rarity !== 'legendary') return;
+
+    if (Math.random() > 0.3) return; // Only 30% chance per move
+
+    const sparkle = document.createElement('div');
+    sparkle.className = 'cursor-sparkle';
+    sparkle.innerText = ['✨', '⭐', '💫', '🌟', '💛'][Math.floor(Math.random() * 5)];
+    sparkle.style.left = (x + (Math.random() - 0.5) * 40) + 'px';
+    sparkle.style.top = (y + (Math.random() - 0.5) * 40) + 'px';
+    document.body.appendChild(sparkle);
+    setTimeout(() => sparkle.remove(), 800);
+}
+
+// Follow mouse/touch with trail effects
 document.addEventListener('mousemove', (e) => {
     if (activeCursor !== 'default') {
         customCursorEl.style.left = e.clientX + 'px';
         customCursorEl.style.top = e.clientY + 'px';
+
+        // Throttle trail spawning
+        const now = Date.now();
+        if (now - cursorTrailThrottle > 30) {
+            cursorTrailThrottle = now;
+            spawnCursorTrail(e.clientX, e.clientY);
+            spawnCursorSparkle(e.clientX, e.clientY);
+        }
     }
 });
 
 document.addEventListener('touchmove', (e) => {
     if (activeCursor !== 'default' && e.touches.length > 0) {
-        customCursorEl.style.left = e.touches[0].clientX + 'px';
-        customCursorEl.style.top = e.touches[0].clientY + 'px';
+        const tx = e.touches[0].clientX;
+        const ty = e.touches[0].clientY;
+        customCursorEl.style.left = tx + 'px';
+        customCursorEl.style.top = ty + 'px';
+
+        const now = Date.now();
+        if (now - cursorTrailThrottle > 30) {
+            cursorTrailThrottle = now;
+            spawnCursorTrail(tx, ty);
+            spawnCursorSparkle(tx, ty);
+        }
     }
 }, { passive: true });
 
@@ -1661,9 +1719,33 @@ document.addEventListener('pointerdown', () => {
     }
 });
 
-// Render cursor grid in settings
+// ============== CURSOR GALLERY ==============
+btnCursors.addEventListener('click', () => {
+    cursorsModal.classList.add('active');
+    renderCursorGrid();
+});
+
 function renderCursorGrid() {
     cursorGrid.innerHTML = '';
+
+    // Stats
+    const totalCursors = CURSOR_ITEMS.length;
+    const ownedCount = unlockedCursors.filter(id => id !== 'default').length;
+    cursorStats.innerHTML = `Collection : <span>${ownedCount}</span> / <span>${totalCursors}</span> curseurs débloqués`;
+
+    // Effect info
+    const rarity = getActiveCursorRarity();
+    if (rarity === 'legendary') {
+        cursorEffectInfo.innerText = '🔥 Effet actif : Trainée dorée + Particules scintillantes';
+    } else if (rarity === 'epic') {
+        cursorEffectInfo.innerText = '✨ Effet actif : Trainée violette';
+    } else if (rarity === 'rare') {
+        cursorEffectInfo.innerText = '💎 Pas d\'effet de trainée (épique+ requis)';
+    } else if (activeCursor !== 'default') {
+        cursorEffectInfo.innerText = '🥔 Pas d\'effet de trainée (épique+ requis)';
+    } else {
+        cursorEffectInfo.innerText = 'Ouvre des coffres 🎁 pour débloquer des curseurs !';
+    }
 
     // Default cursor option
     const defaultEl = document.createElement('div');
@@ -1675,13 +1757,22 @@ function renderCursorGrid() {
     defaultEl.addEventListener('click', () => setActiveCursor('default'));
     cursorGrid.appendChild(defaultEl);
 
-    // All cursor items
-    CURSOR_ITEMS.forEach(item => {
+    // Sort: legendary first, then epic, rare, common
+    const rarityOrder = { legendary: 0, epic: 1, rare: 2, common: 3 };
+    const sorted = [...CURSOR_ITEMS].sort((a, b) => rarityOrder[a.rarity] - rarityOrder[b.rarity]);
+
+    sorted.forEach(item => {
         const isUnlocked = unlockedCursors.includes(item.id);
         const isSelected = activeCursor === item.id;
         const el = document.createElement('div');
         el.className = `cursor-item ${isSelected ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`;
+        
+        let effectBadge = '';
+        if (item.rarity === 'legendary') effectBadge = '<span style="font-size:0.5rem;position:absolute;top:2px;left:4px">🔥</span>';
+        else if (item.rarity === 'epic') effectBadge = '<span style="font-size:0.5rem;position:absolute;top:2px;left:4px">✨</span>';
+        
         el.innerHTML = `
+            ${effectBadge}
             <span class="cursor-rarity-dot ${item.rarity}"></span>
             <span class="cursor-emoji">${isUnlocked ? item.emoji : '❓'}</span>
             <span class="cursor-name">${isUnlocked ? item.name : '???'}</span>
@@ -1696,7 +1787,7 @@ function renderCursorGrid() {
 // Init cursor system on load
 applyCursor();
 
-// Render cursor grid when settings opens
+// Render cursor grid when settings opens (keep backward compat)
 btnSettings.addEventListener('click', () => {
-    renderCursorGrid();
+    // No longer has cursor grid in settings
 });

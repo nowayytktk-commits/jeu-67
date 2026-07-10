@@ -38,6 +38,7 @@
             <div class="hud-buttons">
                 <button id="btn-leaderboard" class="hud-btn" title="Leaderboard">🏆</button>
                 <button id="btn-trophies" class="hud-btn" title="Trophées">🏅</button>
+                <button id="btn-cursors" class="hud-btn" title="Curseurs">🎨</button>
                 <button id="btn-settings" class="hud-btn" title="Paramètres">⚙️</button>
             </div>
             <div id="score-board">
@@ -136,19 +137,31 @@
 
     <!-- Modals -->
     <div id="settings-modal" class="modal-overlay">
-        <div class="modal-content lb-content">
+        <div class="modal-content">
             <h2>⚙️ Paramètres</h2>
             <div class="setting-row">
                 <label for="volume-slider">Volume Principal</label>
                 <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.7">
             </div>
-            <div class="setting-section">
-                <h3>🖱️ Curseur</h3>
-                <div id="cursor-grid" class="cursor-grid">
-                    <!-- Cursors injected by JS -->
-                </div>
-            </div>
             <button class="close-btn" onclick="document.getElementById('settings-modal').classList.remove('active')">Fermer</button>
+        </div>
+    </div>
+
+    <div id="cursors-modal" class="modal-overlay">
+        <div class="modal-content lb-content">
+            <h2>🎨 Collection de Curseurs</h2>
+            <div id="cursor-stats" class="cursor-stats"></div>
+            <div class="cursor-rarity-legend">
+                <span class="legend-item"><span class="legend-dot common"></span> Commun</span>
+                <span class="legend-item"><span class="legend-dot rare"></span> Rare</span>
+                <span class="legend-item"><span class="legend-dot epic"></span> Épique ✨</span>
+                <span class="legend-item"><span class="legend-dot legendary"></span> Légendaire 🔥</span>
+            </div>
+            <div id="cursor-grid" class="cursor-grid">
+                <!-- Cursors injected by JS -->
+            </div>
+            <div class="cursor-effect-info" id="cursor-effect-info"></div>
+            <button class="close-btn" onclick="document.getElementById('cursors-modal').classList.remove('active')">Fermer</button>
         </div>
     </div>
 
