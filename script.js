@@ -66,7 +66,12 @@ const audioSources = {
     pouletboum: 'pouletboum.mp3',
     boum: 'boum.mp3',
     nuke: 'nuke.mp3',
-    romance: 'Romance.mp3'
+    romance: 'Romance.mp3',
+    chest_open: 'Ouverture.mp3',
+    star1: 'Etoile1.mp3',
+    star2: 'Etoile2.mp3',
+    star3: 'Etoile3.mp3',
+    star4: 'Etoile4.mp3'
 };
 
 function playSound(name) {
@@ -817,9 +822,16 @@ function spawnNumber() {
         el.style.fontSize = `${2.8 * scale}rem`;
         el.classList.add('rickroll-item');
     } else if (isGacha) {
-        el.innerText = '🎁';
-        el.style.fontSize = `${3.5 * scale}rem`;
+        const img = document.createElement('img');
+        img.src = 'Coffre.png';
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        img.draggable = false;
+        el.style.width = `${100 * scale}px`;
+        el.style.height = `${100 * scale}px`;
         el.classList.add('gacha-item');
+        el.appendChild(img);
         el.style.filter = 'drop-shadow(0 0 10px rgba(255,215,0,0.6))';
     } else if (isRose) {
         const img = document.createElement('img');
@@ -1394,6 +1406,7 @@ const gachaChest = document.getElementById('gacha-chest');
 const gachaReveal = document.getElementById('gacha-reveal');
 const gachaRays = document.getElementById('gacha-rays');
 const gachaParticles = document.getElementById('gacha-particles');
+const gachaStars = document.getElementById('gacha-stars');
 const gachaRarityEl = document.getElementById('gacha-rarity');
 const gachaItemEmoji = document.getElementById('gacha-item-emoji');
 const gachaItemName = document.getElementById('gacha-item-name');
@@ -1467,6 +1480,7 @@ function startGachaEvent() {
     gachaReveal.classList.remove('active', 'rarity-common', 'rarity-rare', 'rarity-epic', 'rarity-legendary');
     gachaRays.classList.remove('active');
     gachaParticles.innerHTML = '';
+    gachaStars.innerHTML = '';
 
     // Show overlay
     gachaOverlay.classList.add('active');
@@ -1519,15 +1533,43 @@ gachaChest.addEventListener('pointerdown', () => {
     gachaChest.classList.add('opening');
     gachaRays.classList.add('active');
 
-    // Play buildup sound (use existing milestone sound as placeholder)
-    playSound('milestone');
+    // Play buildup sound
+    playSound('chest_open');
 
-    // Shake for 1.5 seconds then reveal
+    const item = rollGachaItem();
+    lastGachaItem = item;
+    
+    // Determine number of stars based on rarity
+    const starsCount = { common: 1, rare: 2, epic: 3, legendary: 4 }[item.rarity];
+    
+    // Create stars
+    gachaStars.innerHTML = '';
+    const starEls = [];
+    for (let i = 0; i < starsCount; i++) {
+        const star = document.createElement('div');
+        star.className = 'gacha-star';
+        star.innerText = '⭐';
+        gachaStars.appendChild(star);
+        starEls.push(star);
+    }
+
+    // Sequence the stars animation
+    // Each star pops in with its corresponding sound
+    for (let i = 0; i < starsCount; i++) {
+        setTimeout(() => {
+            starEls[i].classList.add('show');
+            playSound(`star${i + 1}`);
+        }, 500 + i * 400); // 500ms delay before first star, 400ms between each
+    }
+
+    // Total wait time: 500ms + (starsCount - 1) * 400ms + 600ms pause = 1100ms + (starsCount - 1)*400
+    const revealDelay = 500 + (starsCount - 1) * 400 + 800;
+
+    // Reveal item
     setTimeout(() => {
-        const item = rollGachaItem();
-        lastGachaItem = item;
+        gachaStars.innerHTML = '';
         revealGachaItem(item);
-    }, 1500);
+    }, revealDelay);
 });
 
 function revealGachaItem(item) {
@@ -1606,6 +1648,7 @@ function endGachaEvent() {
     gachaOverlay.classList.remove('active');
     gachaRays.classList.remove('active');
     gachaParticles.innerHTML = '';
+    gachaStars.innerHTML = '';
 
     // Show game again
     gameContainer.style.visibility = 'visible';

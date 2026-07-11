@@ -1408,10 +1408,36 @@ body.custom-cursor-active * {
     display: none;
 }
 
-.chest-top {
-    font-size: 6rem;
+.chest-img {
+    width: 150px;
+    height: auto;
     filter: drop-shadow(0 0 30px rgba(255, 215, 0, 0.6));
     animation: gacha-glow-pulse 1.5s ease-in-out infinite;
+}
+
+/* Stars container */
+.gacha-stars {
+    position: absolute;
+    top: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    z-index: 4;
+    pointer-events: none;
+}
+
+.gacha-star {
+    font-size: 4rem;
+    opacity: 0;
+    transform: scale(0) rotate(-180deg);
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.8));
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.gacha-star.show {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
 }
 
 .chest-label {
@@ -1446,7 +1472,7 @@ body.custom-cursor-active * {
 }
 
 /* Opening animation */
-.gacha-chest.opening .chest-top {
+.gacha-chest.opening .chest-img {
     animation: gacha-open-shake 0.6s ease-in-out infinite;
 }
 
