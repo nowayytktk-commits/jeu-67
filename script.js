@@ -72,7 +72,8 @@ const audioSources = {
     star1: 'Etoile1.mp3',
     star2: 'Etoile2.mp3',
     star3: 'Etoile3.mp3',
-    star4: 'Etoile4.mp3'
+    star4: 'Etoile4.mp3',
+    star5: 'Etoile5.mp3'
 };
 
 function playSound(name) {
