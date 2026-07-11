@@ -1626,6 +1626,50 @@ body.custom-cursor-active * {
 .cursor-rarity-dot.rare { background: #3b82f6; }
 .cursor-rarity-dot.epic { background: #a855f7; }
 .cursor-rarity-dot.legendary { background: #fbbf24; box-shadow: 0 0 6px rgba(251,191,36,0.6); }
+.cursor-rarity-dot.secret { background: linear-gradient(135deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff); box-shadow: 0 0 8px rgba(255,255,255,0.8); }
+
+.secret-item {
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+    animation: secret-item-pulse 2s infinite alternate;
+}
+.secret-item::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 12px;
+    z-index: -1;
+    background: linear-gradient(45deg, #ff0000, #ff7300, #fffb00, #48ff00, #00ffd5, #002bff, #7a00ff, #ff00c8, #ff0000);
+    background-size: 400%;
+    animation: secret-rainbow-border 3s linear infinite;
+}
+
+@keyframes secret-item-pulse {
+    from { box-shadow: 0 0 10px rgba(255,255,255,0.2); }
+    to { box-shadow: 0 0 20px rgba(255,255,255,0.6); }
+}
+@keyframes secret-rainbow-border {
+    0% { background-position: 0 0; }
+    100% { background-position: 400% 0; }
+}
+
+.secret-rainbow {
+    filter: drop-shadow(0 0 10px rgba(255,0,0,0.7)) drop-shadow(0 0 20px rgba(0,255,0,0.5)) drop-shadow(0 0 30px rgba(0,0,255,0.3));
+    animation: secret-rainbow-aura 3s linear infinite;
+}
+
+@keyframes secret-rainbow-aura {
+    0% { filter: drop-shadow(0 0 10px rgba(255,0,0,0.7)) drop-shadow(0 0 20px rgba(0,255,0,0.5)); }
+    33% { filter: drop-shadow(0 0 10px rgba(0,255,0,0.7)) drop-shadow(0 0 20px rgba(0,0,255,0.5)); }
+    66% { filter: drop-shadow(0 0 10px rgba(0,0,255,0.7)) drop-shadow(0 0 20px rgba(255,0,0,0.5)); }
+    100% { filter: drop-shadow(0 0 10px rgba(255,0,0,0.7)) drop-shadow(0 0 20px rgba(0,255,0,0.5)); }
+}
+
+@keyframes handspinner-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
 
 /* ============== CURSOR TRAIL & PARTICLES ============== */
 .cursor-trail {
@@ -1852,6 +1896,15 @@ body.custom-cursor-active * {
     100% { filter: drop-shadow(0 0 30px rgba(255, 220, 50, 1)) drop-shadow(0 0 50px rgba(255, 160, 20, 0.6)) drop-shadow(0 0 70px rgba(255, 120, 0, 0.3)); }
 }
 
+.gacha-star.star-secret { filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.8)); }
+.gacha-star.star-secret.show { animation: gacha-star-shine-secret 0.5s ease-in-out infinite alternate; }
+@keyframes gacha-star-shine-secret {
+    0% { filter: drop-shadow(0 0 15px rgba(255, 0, 0, 0.9)); }
+    33% { filter: drop-shadow(0 0 30px rgba(0, 255, 0, 1)) drop-shadow(0 0 50px rgba(0, 255, 0, 0.6)); }
+    66% { filter: drop-shadow(0 0 30px rgba(0, 0, 255, 1)) drop-shadow(0 0 50px rgba(0, 0, 255, 0.6)); }
+    100% { filter: drop-shadow(0 0 40px rgba(255, 0, 255, 1)) drop-shadow(0 0 60px rgba(255, 0, 255, 0.8)) drop-shadow(0 0 80px rgba(255, 0, 255, 0.4)); }
+}
+
 .chest-label {
     font-family: 'Outfit', sans-serif;
     font-size: 1.5rem;
@@ -1922,6 +1975,7 @@ body.custom-cursor-active * {
 .gacha-flash.flash-rare { background: rgba(59, 130, 246, 0.5); }
 .gacha-flash.flash-epic { background: rgba(168, 85, 247, 0.5); }
 .gacha-flash.flash-legendary { background: rgba(255, 215, 0, 0.7); }
+.gacha-flash.flash-secret { background: rgba(255, 255, 255, 0.9); }
 
 @keyframes gacha-flash-anim {
     0% { opacity: 1; }

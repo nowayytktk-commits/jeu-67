@@ -67,6 +67,7 @@ const audioSources = {
     boum: 'boum.mp3',
     nuke: 'nuke.mp3',
     romance: 'Romance.mp3',
+    bonk: 'Bonk.mp3',
     chest_open: 'Ouverture.mp3',
     star1: 'Etoile1.mp3',
     star2: 'Etoile2.mp3',
@@ -1445,10 +1446,14 @@ const CURSOR_ITEMS = [
     { id: 'crown', emoji: '👑', name: 'Couronne Royale', desc: '« Le roi des 67 »', rarity: 'legendary' },
     { id: 'skull', emoji: '💀', name: 'Crâne Doré', desc: '« Skull emoji = FR »', rarity: 'legendary' },
     { id: 'rainbow', emoji: '🌈', name: 'Arc-en-ciel', desc: '« Ultra méga rare »', rarity: 'legendary' },
+    // Secret (1%) - image-based cursors
+    { id: 'tungtung', emoji: '🔨', name: 'Tung Tung Tung', desc: '« BONK! »', rarity: 'secret', image: 'tungtung.png', sound: 'bonk' },
+    { id: 'licorne', emoji: '🦄', name: 'Licorne Magique', desc: '« 🌈 Nyan~ »', rarity: 'secret', image: 'licorne.png', effect: 'rainbow' },
+    { id: 'handspinner', emoji: '🌀', name: 'Hand Spinner', desc: '« ça tourne ça tourne »', rarity: 'secret', image: 'Handspinner.png', effect: 'spin' },
 ];
 
-const RARITY_WEIGHTS = { common: 55, rare: 25, epic: 15, legendary: 5 };
-const RARITY_LABELS = { common: 'Commun', rare: 'Rare', epic: 'Épique', legendary: 'Légendaire' };
+const RARITY_WEIGHTS = { common: 55, rare: 25, epic: 14, legendary: 5, secret: 1 };
+const RARITY_LABELS = { common: 'Commun', rare: 'Rare', epic: 'Épique', legendary: 'Légendaire', secret: '🔒 SECRET' };
 
 // Cursor persistence
 let unlockedCursors = JSON.parse(localStorage.getItem('jeu67-cursors') || '["default"]');
@@ -1473,9 +1478,10 @@ function rollGachaItem() {
         else rarity = 'rare';
     } else {
         const roll = Math.random() * 100;
-        if (roll < RARITY_WEIGHTS.legendary) rarity = 'legendary';
-        else if (roll < RARITY_WEIGHTS.legendary + RARITY_WEIGHTS.epic) rarity = 'epic';
-        else if (roll < RARITY_WEIGHTS.legendary + RARITY_WEIGHTS.epic + RARITY_WEIGHTS.rare) rarity = 'rare';
+        if (roll < RARITY_WEIGHTS.secret) rarity = 'secret';
+        else if (roll < RARITY_WEIGHTS.secret + RARITY_WEIGHTS.legendary) rarity = 'legendary';
+        else if (roll < RARITY_WEIGHTS.secret + RARITY_WEIGHTS.legendary + RARITY_WEIGHTS.epic) rarity = 'epic';
+        else if (roll < RARITY_WEIGHTS.secret + RARITY_WEIGHTS.legendary + RARITY_WEIGHTS.epic + RARITY_WEIGHTS.rare) rarity = 'rare';
         else rarity = 'common';
     }
 
@@ -1572,7 +1578,7 @@ gachaChest.addEventListener('pointerdown', () => {
     lastGachaItem = item;
     
     // Determine number of stars based on rarity
-    const starsCount = { common: 1, rare: 2, epic: 3, legendary: 4 }[item.rarity];
+    const starsCount = { common: 1, rare: 2, epic: 3, legendary: 4, secret: 5 }[item.rarity];
     const starColorClass = `star-${item.rarity}`;
     
     // Create stars (colored by rarity)
@@ -1621,7 +1627,12 @@ function revealGachaItem(item) {
 
     // Fill reveal content
     gachaRarityEl.innerText = RARITY_LABELS[item.rarity];
-    gachaItemEmoji.innerText = item.emoji;
+    // Show image or emoji in reveal
+    if (item.image) {
+        gachaItemEmoji.innerHTML = `<img src="${item.image}" style="width:80px;height:80px;object-fit:contain;${item.effect === 'spin' ? 'animation:handspinner-spin 1s linear infinite;' : ''}" draggable="false">`;
+    } else {
+        gachaItemEmoji.innerText = item.emoji;
+    }
     gachaItemName.innerText = item.name;
     gachaItemDesc.innerText = item.desc;
 
@@ -1642,7 +1653,10 @@ function revealGachaItem(item) {
     spawnGachaConfetti(item.rarity);
 
     // Play sound based on rarity
-    if (item.rarity === 'legendary') {
+    if (item.rarity === 'secret') {
+        playSound('nuke');
+        if (item.sound) playSound(item.sound);
+    } else if (item.rarity === 'legendary') {
         playSound('nuke');
     } else if (item.rarity === 'epic') {
         playSound('boum');
@@ -1652,8 +1666,10 @@ function revealGachaItem(item) {
         playSound('squish');
     }
 
-    // Show milestone for legendary
-    if (item.rarity === 'legendary') {
+    // Show milestone
+    if (item.rarity === 'secret') {
+        showMilestone('🔒 SECRET DÉBLOQUÉ !!! 🔒');
+    } else if (item.rarity === 'legendary') {
         showMilestone('👑 LÉGENDAIRE ! 👑');
     } else if (item.rarity === 'common') {
         showMilestone('🥔 Wow... +1 pt 🥔');
@@ -1738,22 +1754,43 @@ function applyCursor() {
 
     customCursorEl.classList.remove('epic-aura', 'legendary-aura');
 
+    customCursorEl.classList.remove('secret-rainbow', 'secret-spin');
+    if (customCursorEl._spinAnim) { cancelAnimationFrame(customCursorEl._spinAnim); customCursorEl._spinAnim = null; }
+    customCursorEl._spinAngle = 0;
+
     if (activeCursor === 'default') {
         customCursorEl.classList.remove('active');
         document.body.classList.remove('custom-cursor-active');
     } else {
         const item = CURSOR_ITEMS.find(c => c.id === activeCursor);
         if (item) {
-            customCursorEl.innerText = item.emoji;
+            // Image-based cursor or emoji
+            if (item.image) {
+                customCursorEl.innerHTML = `<img src="${item.image}" style="width:32px;height:32px;object-fit:contain;" draggable="false">`;
+            } else {
+                customCursorEl.innerText = item.emoji;
+            }
             customCursorEl.classList.add('active');
             document.body.classList.add('custom-cursor-active');
 
-            // Apply aura
+            // Apply aura / special effects
             if (item.rarity === 'epic') {
                 customCursorEl.classList.add('epic-aura');
             } else if (item.rarity === 'legendary') {
                 customCursorEl.classList.add('legendary-aura');
                 initOrbitStars();
+            } else if (item.rarity === 'secret') {
+                customCursorEl.classList.add('legendary-aura');
+                if (item.effect === 'rainbow') {
+                    customCursorEl.classList.add('secret-rainbow');
+                    initOrbitStars();
+                } else if (item.effect === 'spin') {
+                    customCursorEl.classList.add('secret-spin');
+                    startSpinAnimation();
+                } else {
+                    // tung tung - just legendary aura
+                    initOrbitStars();
+                }
             }
         }
     }
@@ -1787,26 +1824,59 @@ function animateOrbit() {
     orbitAnimFrame = requestAnimationFrame(animateOrbit);
 }
 
-// Trail effect for epic+ cursors
+// Trail effect for epic+ and secret cursors
 function spawnCursorTrail(x, y) {
     const rarity = getActiveCursorRarity();
-    if (rarity !== 'epic' && rarity !== 'legendary') return;
+    if (rarity !== 'epic' && rarity !== 'legendary' && rarity !== 'secret') return;
+    const item = CURSOR_ITEMS.find(c => c.id === activeCursor);
 
     const trail = document.createElement('div');
-    trail.className = `cursor-trail ${rarity}`;
+    // Rainbow trail for licorne
+    if (item && item.effect === 'rainbow') {
+        trail.className = 'cursor-trail legendary';
+        const hue = (Date.now() / 3) % 360;
+        trail.style.background = `radial-gradient(circle, hsla(${hue}, 100%, 60%, 0.9), hsla(${hue + 60}, 100%, 50%, 0.4), transparent)`;
+        trail.style.boxShadow = `0 0 12px hsla(${hue}, 100%, 50%, 0.8), 0 0 24px hsla(${hue + 60}, 100%, 50%, 0.4)`;
+    } else {
+        trail.className = `cursor-trail ${rarity === 'secret' ? 'legendary' : rarity}`;
+    }
     trail.style.left = x + 'px';
     trail.style.top = y + 'px';
     document.body.appendChild(trail);
 
-    const dur = rarity === 'legendary' ? 900 : 700;
+    const dur = (rarity === 'legendary' || rarity === 'secret') ? 900 : 700;
     setTimeout(() => trail.remove(), dur);
 }
 
-// Sparkle particles for epic & legendary cursors
+// Handspinner spin animation
+function startSpinAnimation() {
+    const img = customCursorEl.querySelector('img');
+    if (!img) return;
+    customCursorEl._spinAngle = 0;
+    function spin() {
+        customCursorEl._spinAngle = (customCursorEl._spinAngle || 0) + 8;
+        img.style.transform = `rotate(${customCursorEl._spinAngle}deg)`;
+        customCursorEl._spinAnim = requestAnimationFrame(spin);
+    }
+    spin();
+}
+
+// Sparkle particles for epic, legendary & secret cursors
 function spawnCursorSparkle(x, y) {
     const rarity = getActiveCursorRarity();
+    const item = CURSOR_ITEMS.find(c => c.id === activeCursor);
     
-    if (rarity === 'epic') {
+    if (rarity === 'secret' && item && item.effect === 'rainbow') {
+        // Rainbow sparkles for licorne
+        if (Math.random() > 0.2) return;
+        const sparkle = document.createElement('div');
+        sparkle.className = 'cursor-sparkle legendary-sparkle';
+        sparkle.innerText = ['🌈', '✨', '💖', '💜', '💙', '💚', '💛', '🧡'][Math.floor(Math.random() * 8)];
+        sparkle.style.left = (x + (Math.random() - 0.5) * 50) + 'px';
+        sparkle.style.top = (y + (Math.random() - 0.5) * 50) + 'px';
+        document.body.appendChild(sparkle);
+        setTimeout(() => sparkle.remove(), 1200);
+    } else if (rarity === 'epic') {
         if (Math.random() > 0.15) return;
         const sparkle = document.createElement('div');
         sparkle.className = 'cursor-sparkle epic-sparkle';
@@ -1815,7 +1885,7 @@ function spawnCursorSparkle(x, y) {
         sparkle.style.top = (y + (Math.random() - 0.5) * 30) + 'px';
         document.body.appendChild(sparkle);
         setTimeout(() => sparkle.remove(), 600);
-    } else if (rarity === 'legendary') {
+    } else if (rarity === 'legendary' || rarity === 'secret') {
         if (Math.random() > 0.25) return;
         const sparkle = document.createElement('div');
         sparkle.className = 'cursor-sparkle legendary-sparkle';
@@ -1830,6 +1900,12 @@ function spawnCursorSparkle(x, y) {
 // Click effects
 function spawnClickEffect(x, y) {
     const rarity = getActiveCursorRarity();
+    const item = CURSOR_ITEMS.find(c => c.id === activeCursor);
+
+    // Tung tung: bonk sound on click
+    if (item && item.sound) {
+        playSound(item.sound);
+    }
     
     if (rarity === 'epic') {
         // Purple shockwave ring
@@ -1926,7 +2002,13 @@ function renderCursorGrid() {
 
     // Effect info
     const rarity = getActiveCursorRarity();
-    if (rarity === 'legendary') {
+    const activeItem = CURSOR_ITEMS.find(c => c.id === activeCursor);
+    if (rarity === 'secret' && activeItem) {
+        if (activeItem.effect === 'rainbow') cursorEffectInfo.innerText = '🌈 Trainée arc-en-ciel + Étoiles orbitales';
+        else if (activeItem.effect === 'spin') cursorEffectInfo.innerText = '🌀 Handspinner rotatif infini !';
+        else if (activeItem.sound) cursorEffectInfo.innerText = '🔨 BONK! à chaque clic + Particules';
+        else cursorEffectInfo.innerText = '🔒 Effet SECRET !';
+    } else if (rarity === 'legendary') {
         cursorEffectInfo.innerText = '🔥 Trainée dorée + Étoiles orbitales + Explosion au clic';
     } else if (rarity === 'epic') {
         cursorEffectInfo.innerText = '✨ Trainée violette + Onde de choc au clic';
@@ -1956,7 +2038,7 @@ function renderCursorGrid() {
         const isUnlocked = unlockedCursors.includes(item.id);
         const isSelected = activeCursor === item.id;
         const el = document.createElement('div');
-        el.className = `cursor-item ${isSelected ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''}`;
+        el.className = `cursor-item ${isSelected ? 'selected' : ''} ${!isUnlocked ? 'locked' : ''} ${item.rarity === 'secret' ? 'secret-item' : ''}`;
         
         let effectBadge = '';
         if (item.rarity === 'legendary') effectBadge = '<span style="font-size:0.5rem;position:absolute;top:2px;left:4px">🔥</span>';
