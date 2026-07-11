@@ -1454,13 +1454,35 @@ const RARITY_LABELS = { common: 'Commun', rare: 'Rare', epic: 'Épique', legenda
 let unlockedCursors = JSON.parse(localStorage.getItem('jeu67-cursors') || '["default"]');
 let activeCursor = localStorage.getItem('jeu67-active-cursor') || 'default';
 
+let gachaPity = parseInt(localStorage.getItem('jeu67-gacha-pity') || '0');
+
 function rollGachaItem() {
-    const roll = Math.random() * 100;
+    gachaPity++;
+    localStorage.setItem('jeu67-gacha-pity', gachaPity);
+
     let rarity;
-    if (roll < RARITY_WEIGHTS.legendary) rarity = 'legendary';
-    else if (roll < RARITY_WEIGHTS.legendary + RARITY_WEIGHTS.epic) rarity = 'epic';
-    else if (roll < RARITY_WEIGHTS.legendary + RARITY_WEIGHTS.epic + RARITY_WEIGHTS.rare) rarity = 'rare';
-    else rarity = 'common';
+    // Pity system: guaranteed epic+ every 15, rare+ every 5
+    if (gachaPity >= 15) {
+        rarity = Math.random() < 0.3 ? 'legendary' : 'epic';
+        gachaPity = 0;
+        localStorage.setItem('jeu67-gacha-pity', 0);
+    } else if (gachaPity >= 5 && gachaPity % 5 === 0) {
+        const roll = Math.random() * 100;
+        if (roll < 8) rarity = 'legendary';
+        else if (roll < 30) rarity = 'epic';
+        else rarity = 'rare';
+    } else {
+        const roll = Math.random() * 100;
+        if (roll < RARITY_WEIGHTS.legendary) rarity = 'legendary';
+        else if (roll < RARITY_WEIGHTS.legendary + RARITY_WEIGHTS.epic) rarity = 'epic';
+        else if (roll < RARITY_WEIGHTS.legendary + RARITY_WEIGHTS.epic + RARITY_WEIGHTS.rare) rarity = 'rare';
+        else rarity = 'common';
+    }
+
+    if (rarity !== 'common') {
+        gachaPity = 0;
+        localStorage.setItem('jeu67-gacha-pity', 0);
+    }
 
     const pool = CURSOR_ITEMS.filter(c => c.rarity === rarity);
     return pool[Math.floor(Math.random() * pool.length)];
@@ -1476,7 +1498,7 @@ function startGachaEvent() {
     document.getElementById('hud').style.visibility = 'hidden';
 
     // Reset state
-    gachaChest.classList.remove('hidden', 'opening');
+    gachaChest.classList.remove('hidden', 'opening', 'shake-intense');
     document.querySelector('#gacha-chest .chest-img').src = 'Coffre.png';
     gachaReveal.classList.remove('active', 'rarity-common', 'rarity-rare', 'rarity-epic', 'rarity-legendary');
     gachaRays.classList.remove('active');
@@ -1511,8 +1533,9 @@ function spawnGachaConfetti(rarityColor) {
         legendary: ['#fbbf24', '#f59e0b', '#fcd34d', '#ff6b6b', '#4ade80']
     };
     const palette = colors[rarityColor] || colors.common;
+    const count = rarityColor === 'legendary' ? 80 : rarityColor === 'epic' ? 60 : 40;
     
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < count; i++) {
         const piece = document.createElement('div');
         piece.className = 'gacha-confetti-piece';
         piece.style.left = `${Math.random() * 100}vw`;
@@ -1526,6 +1549,13 @@ function spawnGachaConfetti(rarityColor) {
         document.body.appendChild(piece);
         setTimeout(() => piece.remove(), 4000);
     }
+}
+
+function spawnScreenFlash(rarity) {
+    const flash = document.createElement('div');
+    flash.className = `gacha-flash flash-${rarity}`;
+    document.body.appendChild(flash);
+    setTimeout(() => flash.remove(), 700);
 }
 
 // Chest click handler
@@ -1543,33 +1573,41 @@ gachaChest.addEventListener('pointerdown', () => {
     
     // Determine number of stars based on rarity
     const starsCount = { common: 1, rare: 2, epic: 3, legendary: 4 }[item.rarity];
+    const starColorClass = `star-${item.rarity}`;
     
-    // Create stars
+    // Create stars (colored by rarity)
     gachaStars.innerHTML = '';
     const starEls = [];
     for (let i = 0; i < starsCount; i++) {
         const star = document.createElement('div');
-        star.className = 'gacha-star';
+        star.className = `gacha-star ${starColorClass}`;
         star.innerText = '⭐';
         gachaStars.appendChild(star);
         starEls.push(star);
     }
 
+    // Crescendo shake: intensify after half the stars
+    const intensifyAt = Math.max(1, Math.floor(starsCount / 2));
+    setTimeout(() => {
+        gachaChest.classList.add('shake-intense');
+    }, 500 + intensifyAt * 400);
+
     // Sequence the stars animation
-    // Each star pops in with its corresponding sound
     for (let i = 0; i < starsCount; i++) {
         setTimeout(() => {
             starEls[i].classList.add('show');
             playSound(`star${i + 1}`);
-        }, 500 + i * 400); // 500ms delay before first star, 400ms between each
+        }, 500 + i * 400);
     }
 
-    // Total wait time: 500ms + (starsCount - 1) * 400ms + 600ms pause = 1100ms + (starsCount - 1)*400
+    // Reveal delay
     const revealDelay = 500 + (starsCount - 1) * 400 + 800;
 
-    // Reveal item
+    // Screen flash + reveal
     setTimeout(() => {
+        spawnScreenFlash(item.rarity);
         gachaStars.innerHTML = '';
+        gachaChest.classList.remove('shake-intense');
         revealGachaItem(item);
     }, revealDelay);
 });
@@ -1590,10 +1628,10 @@ function revealGachaItem(item) {
     // Check if already owned
     const alreadyOwned = unlockedCursors.includes(item.id);
     if (alreadyOwned) {
-        gachaEquipBtn.innerText = 'Déjà obtenu !';
-        gachaEquipBtn.style.opacity = '0.5';
+        gachaEquipBtn.innerText = '🔄 Doublon ! +67 pts';
+        gachaEquipBtn.style.opacity = '0.7';
     } else {
-        gachaEquipBtn.innerText = 'Équiper !';
+        gachaEquipBtn.innerText = '✅ Équiper !';
         gachaEquipBtn.style.opacity = '1';
         // Unlock the cursor
         unlockedCursors.push(item.id);
@@ -1605,13 +1643,13 @@ function revealGachaItem(item) {
 
     // Play sound based on rarity
     if (item.rarity === 'legendary') {
-        playSound('nuke'); // epic sound for legendary
+        playSound('nuke');
     } else if (item.rarity === 'epic') {
         playSound('boum');
     } else if (item.rarity === 'rare') {
         playSound('click');
     } else {
-        playSound('squish'); // troll sound for common
+        playSound('squish');
     }
 
     // Show milestone for legendary
@@ -1624,8 +1662,18 @@ function revealGachaItem(item) {
 
 // Equip button
 gachaEquipBtn.addEventListener('pointerdown', () => {
-    if (lastGachaItem && unlockedCursors.includes(lastGachaItem.id)) {
-        setActiveCursor(lastGachaItem.id);
+    if (lastGachaItem) {
+        const alreadyOwned = unlockedCursors.filter(id => id === lastGachaItem.id).length > 1 ||
+                             (unlockedCursors.includes(lastGachaItem.id) && gachaEquipBtn.innerText.includes('Doublon'));
+        if (alreadyOwned || gachaEquipBtn.innerText.includes('Doublon')) {
+            // Doublon bonus
+            score += 67;
+            scoreEl.innerText = score;
+            updateBestScore();
+            showMilestone('🔄 Doublon ! +67 pts');
+        } else {
+            setActiveCursor(lastGachaItem.id);
+        }
         endGachaEvent();
     }
 });
@@ -1665,6 +1713,9 @@ const btnCursors = document.getElementById('btn-cursors');
 const cursorStats = document.getElementById('cursor-stats');
 const cursorEffectInfo = document.getElementById('cursor-effect-info');
 let cursorTrailThrottle = 0;
+let orbitStars = [];
+let orbitAngle = 0;
+let orbitAnimFrame = null;
 
 function setActiveCursor(cursorId) {
     activeCursor = cursorId;
@@ -1680,6 +1731,13 @@ function getActiveCursorRarity() {
 }
 
 function applyCursor() {
+    // Clean up old orbiting stars
+    orbitStars.forEach(s => s.remove());
+    orbitStars = [];
+    if (orbitAnimFrame) { cancelAnimationFrame(orbitAnimFrame); orbitAnimFrame = null; }
+
+    customCursorEl.classList.remove('epic-aura', 'legendary-aura');
+
     if (activeCursor === 'default') {
         customCursorEl.classList.remove('active');
         document.body.classList.remove('custom-cursor-active');
@@ -1689,8 +1747,44 @@ function applyCursor() {
             customCursorEl.innerText = item.emoji;
             customCursorEl.classList.add('active');
             document.body.classList.add('custom-cursor-active');
+
+            // Apply aura
+            if (item.rarity === 'epic') {
+                customCursorEl.classList.add('epic-aura');
+            } else if (item.rarity === 'legendary') {
+                customCursorEl.classList.add('legendary-aura');
+                initOrbitStars();
+            }
         }
     }
+}
+
+// Legendary orbiting stars
+function initOrbitStars() {
+    const starEmojis = ['✨', '⭐', '💫'];
+    for (let i = 0; i < 3; i++) {
+        const s = document.createElement('div');
+        s.className = 'cursor-orbit-star';
+        s.innerText = starEmojis[i];
+        document.body.appendChild(s);
+        orbitStars.push(s);
+    }
+    animateOrbit();
+}
+
+function animateOrbit() {
+    orbitAngle += 0.03;
+    const cx = parseFloat(customCursorEl.style.left) || 0;
+    const cy = parseFloat(customCursorEl.style.top) || 0;
+    const radius = 30;
+
+    orbitStars.forEach((star, i) => {
+        const angle = orbitAngle + (i * Math.PI * 2 / 3);
+        star.style.left = (cx + Math.cos(angle) * radius) + 'px';
+        star.style.top = (cy + Math.sin(angle) * radius) + 'px';
+    });
+
+    orbitAnimFrame = requestAnimationFrame(animateOrbit);
 }
 
 // Trail effect for epic+ cursors
@@ -1703,23 +1797,74 @@ function spawnCursorTrail(x, y) {
     trail.style.left = x + 'px';
     trail.style.top = y + 'px';
     document.body.appendChild(trail);
-    setTimeout(() => trail.remove(), 500);
+
+    const dur = rarity === 'legendary' ? 900 : 700;
+    setTimeout(() => trail.remove(), dur);
 }
 
-// Sparkle particles for legendary cursors
+// Sparkle particles for epic & legendary cursors
 function spawnCursorSparkle(x, y) {
     const rarity = getActiveCursorRarity();
-    if (rarity !== 'legendary') return;
+    
+    if (rarity === 'epic') {
+        if (Math.random() > 0.15) return;
+        const sparkle = document.createElement('div');
+        sparkle.className = 'cursor-sparkle epic-sparkle';
+        sparkle.innerText = ['✨', '💜', '🔮'][Math.floor(Math.random() * 3)];
+        sparkle.style.left = (x + (Math.random() - 0.5) * 30) + 'px';
+        sparkle.style.top = (y + (Math.random() - 0.5) * 30) + 'px';
+        document.body.appendChild(sparkle);
+        setTimeout(() => sparkle.remove(), 600);
+    } else if (rarity === 'legendary') {
+        if (Math.random() > 0.25) return;
+        const sparkle = document.createElement('div');
+        sparkle.className = 'cursor-sparkle legendary-sparkle';
+        sparkle.innerText = ['✨', '⭐', '💫', '🌟', '💛', '🔥'][Math.floor(Math.random() * 6)];
+        sparkle.style.left = (x + (Math.random() - 0.5) * 50) + 'px';
+        sparkle.style.top = (y + (Math.random() - 0.5) * 50) + 'px';
+        document.body.appendChild(sparkle);
+        setTimeout(() => sparkle.remove(), 1200);
+    }
+}
 
-    if (Math.random() > 0.3) return; // Only 30% chance per move
+// Click effects
+function spawnClickEffect(x, y) {
+    const rarity = getActiveCursorRarity();
+    
+    if (rarity === 'epic') {
+        // Purple shockwave ring
+        const wave = document.createElement('div');
+        wave.className = 'cursor-shockwave';
+        wave.style.left = x + 'px';
+        wave.style.top = y + 'px';
+        document.body.appendChild(wave);
+        setTimeout(() => wave.remove(), 600);
+    } else if (rarity === 'legendary') {
+        // Golden burst explosion
+        const burstEmojis = ['✨', '⭐', '💫', '🌟', '💥', '🔥'];
+        for (let i = 0; i < 8; i++) {
+            const burst = document.createElement('div');
+            burst.className = 'cursor-burst';
+            burst.innerText = burstEmojis[Math.floor(Math.random() * burstEmojis.length)];
+            const angle = (i / 8) * Math.PI * 2;
+            const dist = 40 + Math.random() * 30;
+            burst.style.left = x + 'px';
+            burst.style.top = y + 'px';
+            burst.style.setProperty('--bx', `${Math.cos(angle) * dist}px`);
+            burst.style.setProperty('--by', `${Math.sin(angle) * dist}px`);
+            document.body.appendChild(burst);
+            setTimeout(() => burst.remove(), 700);
+        }
 
-    const sparkle = document.createElement('div');
-    sparkle.className = 'cursor-sparkle';
-    sparkle.innerText = ['✨', '⭐', '💫', '🌟', '💛'][Math.floor(Math.random() * 5)];
-    sparkle.style.left = (x + (Math.random() - 0.5) * 40) + 'px';
-    sparkle.style.top = (y + (Math.random() - 0.5) * 40) + 'px';
-    document.body.appendChild(sparkle);
-    setTimeout(() => sparkle.remove(), 800);
+        // Shockwave too
+        const wave = document.createElement('div');
+        wave.className = 'cursor-shockwave';
+        wave.style.left = x + 'px';
+        wave.style.top = y + 'px';
+        wave.style.borderColor = 'rgba(255, 200, 40, 0.8)';
+        document.body.appendChild(wave);
+        setTimeout(() => wave.remove(), 600);
+    }
 }
 
 // Follow mouse/touch with trail effects
@@ -1730,7 +1875,7 @@ document.addEventListener('mousemove', (e) => {
 
         // Throttle trail spawning
         const now = Date.now();
-        if (now - cursorTrailThrottle > 30) {
+        if (now - cursorTrailThrottle > 25) {
             cursorTrailThrottle = now;
             spawnCursorTrail(e.clientX, e.clientY);
             spawnCursorSparkle(e.clientX, e.clientY);
@@ -1746,7 +1891,7 @@ document.addEventListener('touchmove', (e) => {
         customCursorEl.style.top = ty + 'px';
 
         const now = Date.now();
-        if (now - cursorTrailThrottle > 30) {
+        if (now - cursorTrailThrottle > 25) {
             cursorTrailThrottle = now;
             spawnCursorTrail(tx, ty);
             spawnCursorSparkle(tx, ty);
@@ -1755,12 +1900,13 @@ document.addEventListener('touchmove', (e) => {
 }, { passive: true });
 
 // Click animation
-document.addEventListener('pointerdown', () => {
+document.addEventListener('pointerdown', (e) => {
     if (activeCursor !== 'default') {
         customCursorEl.style.transform = 'translate(-50%, -50%) scale(0.75)';
         setTimeout(() => {
             customCursorEl.style.transform = 'translate(-50%, -50%) scale(1)';
         }, 100);
+        spawnClickEffect(e.clientX, e.clientY);
     }
 });
 
@@ -1781,9 +1927,9 @@ function renderCursorGrid() {
     // Effect info
     const rarity = getActiveCursorRarity();
     if (rarity === 'legendary') {
-        cursorEffectInfo.innerText = '🔥 Effet actif : Trainée dorée + Particules scintillantes';
+        cursorEffectInfo.innerText = '🔥 Trainée dorée + Étoiles orbitales + Explosion au clic';
     } else if (rarity === 'epic') {
-        cursorEffectInfo.innerText = '✨ Effet actif : Trainée violette';
+        cursorEffectInfo.innerText = '✨ Trainée violette + Onde de choc au clic';
     } else if (rarity === 'rare') {
         cursorEffectInfo.innerText = '💎 Pas d\'effet de trainée (épique+ requis)';
     } else if (activeCursor !== 'default') {
