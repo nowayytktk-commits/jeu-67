@@ -144,6 +144,9 @@
                 <label for="volume-slider">Volume Principal</label>
                 <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.7">
             </div>
+            <div class="setting-row" style="margin-top: 15px; justify-content: center;">
+                <button id="btn-open-admin" class="hud-btn" style="width: 100%; background: rgba(255,0,0,0.2); border-color: rgba(255,0,0,0.5); color: #ff5555;">🛠️ Menu Administrateur</button>
+            </div>
             <button class="close-btn" onclick="document.getElementById('settings-modal').classList.remove('active')">Fermer</button>
         </div>
     </div>
@@ -163,6 +166,56 @@
             </div>
             <div class="cursor-effect-info" id="cursor-effect-info"></div>
             <button class="close-btn" onclick="document.getElementById('cursors-modal').classList.remove('active')">Fermer</button>
+        </div>
+    </div>
+
+    <!-- Admin Menu Modal -->
+    <div id="admin-modal" class="modal-overlay">
+        <div class="modal-content lb-content" style="max-width: 600px;">
+            <h2 style="color: #ff5555;">🛠️ Panneau d'Administration</h2>
+            
+            <div id="admin-login-section">
+                <p style="margin-bottom: 10px;">Veuillez entrer le mot de passe administrateur :</p>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <input type="password" id="admin-password-input" placeholder="Mot de passe..." style="padding: 5px 10px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: white; outline: none;">
+                    <button id="btn-admin-login" class="hud-btn" style="font-size: 1rem; padding: 5px 15px;">Valider</button>
+                </div>
+                <p id="admin-login-error" style="color: #ff5555; margin-top: 10px; display: none;">Mot de passe incorrect.</p>
+            </div>
+
+            <div id="admin-controls-section" style="display: none; text-align: left;">
+                
+                <div class="admin-section">
+                    <h3>🏆 Score & Trophées</h3>
+                    <button class="admin-btn" onclick="score += 1000; scoreEl.innerText = score; updateBestScore();">➕ +1 000 Pts</button>
+                    <button class="admin-btn" onclick="score += 100000; scoreEl.innerText = score; updateBestScore();">➕ +100 000 Pts</button>
+                    <button class="admin-btn" onclick="Object.keys(TROPHIES).forEach(k => unlockTrophy(k))">🏆 Tout débloquer</button>
+                    <button class="admin-btn" onclick="localStorage.clear(); location.reload();" style="background:rgba(255,0,0,0.3)">⚠️ Reset Sauvegarde</button>
+                </div>
+
+                <div class="admin-section">
+                    <h3>🎮 Événements (Test)</h3>
+                    <button class="admin-btn" onclick="startGachaEvent(); document.getElementById('admin-modal').classList.remove('active'); document.getElementById('settings-modal').classList.remove('active');">🎁 Forcer Gacha</button>
+                    <button class="admin-btn" onclick="triggerOsuMode(); document.getElementById('admin-modal').classList.remove('active'); document.getElementById('settings-modal').classList.remove('active');">🎵 Forcer OSU!</button>
+                    <button class="admin-btn" onclick="triggerRickroll(); document.getElementById('admin-modal').classList.remove('active'); document.getElementById('settings-modal').classList.remove('active');">🕺 Forcer Rickroll</button>
+                    <button class="admin-btn" onclick="spawnBoss(); document.getElementById('admin-modal').classList.remove('active'); document.getElementById('settings-modal').classList.remove('active');">👿 Forcer Boss</button>
+                </div>
+
+                <div class="admin-section">
+                    <h3>🎨 Curseurs</h3>
+                    <button class="admin-btn" onclick="CURSOR_ITEMS.forEach(c => { if(!unlockedCursors.includes(c.id)) unlockedCursors.push(c.id); }); localStorage.setItem('jeu67-cursors', JSON.stringify(unlockedCursors)); renderCursorGrid();">🔓 Débloquer TOUS les curseurs</button>
+                </div>
+
+                <div class="admin-section">
+                    <h3>🔊 Test des Sons</h3>
+                    <div id="admin-sounds-grid" style="display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px;">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+
+            </div>
+
+            <button class="close-btn" onclick="document.getElementById('admin-modal').classList.remove('active')" style="margin-top: 20px;">Fermer</button>
         </div>
     </div>
 

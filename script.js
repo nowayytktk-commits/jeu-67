@@ -2065,3 +2065,56 @@ applyCursor();
 btnSettings.addEventListener('click', () => {
     // No longer has cursor grid in settings
 });
+
+// ============== ADMIN MENU LOGIC ==============
+const btnOpenAdmin = document.getElementById('btn-open-admin');
+const adminModal = document.getElementById('admin-modal');
+const btnAdminLogin = document.getElementById('btn-admin-login');
+const adminPasswordInput = document.getElementById('admin-password-input');
+const adminLoginError = document.getElementById('admin-login-error');
+const adminLoginSection = document.getElementById('admin-login-section');
+const adminControlsSection = document.getElementById('admin-controls-section');
+const adminSoundsGrid = document.getElementById('admin-sounds-grid');
+
+btnOpenAdmin.addEventListener('click', () => {
+    adminModal.classList.add('active');
+    adminPasswordInput.value = '';
+    adminLoginError.style.display = 'none';
+    
+    // Check if already authenticated this session
+    if (sessionStorage.getItem('admin-auth') === 'true') {
+        showAdminControls();
+    } else {
+        adminLoginSection.style.display = 'block';
+        adminControlsSection.style.display = 'none';
+    }
+});
+
+btnAdminLogin.addEventListener('click', () => {
+    if (adminPasswordInput.value === 'Admin') {
+        sessionStorage.setItem('admin-auth', 'true');
+        showAdminControls();
+    } else {
+        adminLoginError.style.display = 'block';
+    }
+});
+
+adminPasswordInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') btnAdminLogin.click();
+});
+
+function showAdminControls() {
+    adminLoginSection.style.display = 'none';
+    adminControlsSection.style.display = 'block';
+
+    // Populate sounds grid if empty
+    if (adminSoundsGrid.innerHTML.trim() === '') {
+        Object.keys(audioSources).forEach(soundKey => {
+            const btn = document.createElement('button');
+            btn.className = 'admin-btn';
+            btn.innerText = `🔊 ${soundKey}`;
+            btn.onclick = () => playSound(soundKey);
+            adminSoundsGrid.appendChild(btn);
+        });
+    }
+}

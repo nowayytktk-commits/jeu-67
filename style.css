@@ -1991,3 +1991,34 @@ body.custom-cursor-active * {
     font-style: italic;
     min-height: 1.2em;
 }
+
+/* ============== ADMIN MENU ============== */
+.admin-section {
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid rgba(255,85,85,0.3);
+}
+.admin-section h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    color: #ffaa00;
+}
+.admin-btn {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.9rem;
+    padding: 6px 12px;
+    margin: 3px;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.1);
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.admin-btn:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.4);
+}
