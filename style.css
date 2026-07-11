@@ -1345,7 +1345,10 @@ body.custom-cursor-active * {
 /* Golden rays */
 #gacha-rays {
     position: absolute;
-    inset: 0;
+    width: 200vw;
+    height: 200vh;
+    left: -50vw;
+    top: -50vh;
     display: none;
     background:
         repeating-conic-gradient(
@@ -1353,7 +1356,7 @@ body.custom-cursor-active * {
             transparent 8deg,
             transparent 20deg
         );
-    animation: gacha-spin 8s linear infinite;
+    animation: gacha-spin 10s linear infinite;
 }
 
 #gacha-rays.active {

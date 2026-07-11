@@ -1477,6 +1477,7 @@ function startGachaEvent() {
 
     // Reset state
     gachaChest.classList.remove('hidden', 'opening');
+    document.querySelector('#gacha-chest .chest-img').src = 'Coffre.png';
     gachaReveal.classList.remove('active', 'rarity-common', 'rarity-rare', 'rarity-epic', 'rarity-legendary');
     gachaRays.classList.remove('active');
     gachaParticles.innerHTML = '';
@@ -1532,6 +1533,7 @@ gachaChest.addEventListener('pointerdown', () => {
     if (gachaChest.classList.contains('opening')) return;
     gachaChest.classList.add('opening');
     gachaRays.classList.add('active');
+    document.querySelector('#gacha-chest .chest-img').src = 'CoffreOuvert.png';
 
     // Play buildup sound
     playSound('chest_open');
