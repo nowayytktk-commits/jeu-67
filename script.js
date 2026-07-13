@@ -2118,3 +2118,13 @@ function showAdminControls() {
         });
     }
 }
+
+// Global fix: Prevent buttons from retaining focus
+// This stops Space/Enter from accidentally reopening modals (like Admin Menu) while playing
+document.addEventListener('click', (e) => {
+    if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+        const btn = e.target.tagName === 'BUTTON' ? e.target : e.target.closest('button');
+        btn.blur();
+    }
+});
+
